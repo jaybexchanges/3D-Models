@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mappa 3D - Mostriciattoli</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            overflow: hidden;
+            background: #1a1a2e;
+        }
+
+        #canvas-container {
+            width: 100vw;
+            height: 100vh;
+        }
+
+        #ui-overlay {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: white;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 20px;
+            border-radius: 10px;
+            max-width: 300px;
+            backdrop-filter: blur(10px);
+        }
+
+        h1 {
+            font-size: 24px;
+            margin-bottom: 15px;
+            color: #00d9ff;
+        }
+
+        .monster-control {
+            margin: 15px 0;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .monster-control h3 {
+            color: #ffd700;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            margin: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .controls {
+            margin-top: 20px;
+            padding-top: 15px;
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .controls p {
+            font-size: 12px;
+            line-height: 1.6;
+            color: #b0b0b0;
+        }
+
+        #loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 24px;
+            text-align: center;
+        }
+
+        .loader {
+            border: 5px solid rgba(255, 255, 255, 0.1);
+            border-top: 5px solid #00d9ff;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="loading">
+        <div class="loader"></div>
+        <p>Caricamento mostriciattoli...</p>
+    </div>
+
+    <div id="canvas-container"></div>
+
+    <div id="ui-overlay" class="hidden">
+        <h1>🎮 Controlli Mostri</h1>
+        
+        <div class="monster-control">
+            <h3>🔵 Blue Puffball</h3>
+            <button onclick="game.animateMonster('blue', 'jump')">Salta</button>
+            <button onclick="game.animateMonster('blue', 'spin')">Gira</button>
+            <button onclick="game.toggleMovement('blue')">Muovi</button>
+        </div>
+
+        <div class="monster-control">
+            <h3>👻 Gnugnu</h3>
+            <button onclick="game.animateMonster('gnugnu', 'jump')">Salta</button>
+            <button onclick="game.animateMonster('gnugnu', 'spin')">Gira</button>
+            <button onclick="game.toggleMovement('gnugnu')">Muovi</button>
+        </div>
+
+        <div class="monster-control">
+            <h3>🌸 Lotus</h3>
+            <button onclick="game.animateMonster('lotus', 'jump')">Salta</button>
+            <button onclick="game.animateMonster('lotus', 'spin')">Gira</button>
+            <button onclick="game.toggleMovement('lotus')">Muovi</button>
+        </div>
+
+        <div class="controls">
+            <p><strong>🖱️ Mouse:</strong> Ruota camera</p>
+            <p><strong>🔍 Scroll:</strong> Zoom</p>
+            <p><strong>⌨️ WASD:</strong> Muovi camera</p>
+        </div>
+    </div>
+
+    <script type="module" src="game.js"></script>
+</body>
+</html>
