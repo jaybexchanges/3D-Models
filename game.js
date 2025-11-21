@@ -209,9 +209,15 @@ class MonsterGame {
     async loadMonsters() {
         const loader = new GLTFLoader();
         const monsterConfigs = [
-            { name: 'blue', file: 'Blue_Puffball_3D.glb', position: { x: -10, y: 2, z: 0 }, scale: 2 },
-            { name: 'gnugnu', file: 'Gnugnu_3D.glb', position: { x: 0, y: 2, z: 0 }, scale: 2 },
-            { name: 'lotus', file: 'Lotus_3D.glb', position: { x: 10, y: 2, z: 0 }, scale: 2 }
+            { name: 'blue', file: 'Blue_Puffball_3D.glb', position: { x: -15, y: 2, z: -8 }, scale: 2 },
+            { name: 'gnugnu', file: 'Gnugnu_3D.glb', position: { x: -5, y: 2, z: -8 }, scale: 2 },
+            { name: 'lotus', file: 'Lotus_3D.glb', position: { x: 5, y: 2, z: -8 }, scale: 2 },
+            { name: 'blossom', file: 'Blossom_3D.glb', position: { x: 15, y: 2, z: -8 }, scale: 2 },
+            { name: 'lavaflare', file: 'LavaFlare.glb', position: { x: -15, y: 2, z: 8 }, scale: 2 },
+            { name: 'pyrolynx', file: 'Pyrolynx.glb', position: { x: -5, y: 2, z: 8 }, scale: 2 },
+            { name: 'player1', file: 'Player_1.glb', position: { x: 5, y: 2, z: 8 }, scale: 2 },
+            { name: 'player2', file: 'Player_2.glb', position: { x: 15, y: 2, z: 8 }, scale: 2 },
+            { name: 'pokecenter', file: 'Pokémon_Center.glb', position: { x: 0, y: 2, z: 0 }, scale: 3, isBuilding: true }
         ];
 
         let loadedCount = 0;
@@ -240,7 +246,8 @@ class MonsterGame {
                     basePosition: { ...config.position },
                     isMoving: false,
                     movementAngle: Math.random() * Math.PI * 2,
-                    idleAnimation: { time: Math.random() * Math.PI * 2 }
+                    idleAnimation: { time: Math.random() * Math.PI * 2 },
+                    isBuilding: config.isBuilding || false
                 };
 
                 loadedCount++;
@@ -364,6 +371,9 @@ class MonsterGame {
 
     updateMonsters(deltaTime) {
         Object.values(this.monsters).forEach(monster => {
+            // Buildings don't animate
+            if (monster.isBuilding) return;
+            
             // Idle animation (bobbing)
             if (!monster.isMoving) {
                 monster.idleAnimation.time += deltaTime * 2;
