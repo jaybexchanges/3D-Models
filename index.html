@@ -4,6 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mappa 3D - Mostriciattoli</title>
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"
+        }
+    }
+    </script>
     <style>
         * {
             margin: 0;
@@ -176,6 +184,7 @@
             <h3>👤 Player 1</h3>
             <button onclick="game.animateMonster('player1', 'jump')">Salta</button>
             <button onclick="game.animateMonster('player1', 'spin')">Gira</button>
+            <button onclick="game.animateMonster('player1', 'walk')">Cammina</button>
             <button onclick="game.toggleMovement('player1')">Muovi</button>
         </div>
 

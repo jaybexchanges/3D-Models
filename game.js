@@ -1,6 +1,6 @@
-import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
-import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/controls/OrbitControls.js';
-import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/loaders/GLTFLoader.js';
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 class MonsterGame {
     constructor() {
@@ -16,15 +16,13 @@ class MonsterGame {
     }
 
     init() {
+        this.setupKeyboardControls(); // Initialize keyboard first
         this.setupScene();
         this.setupLights();
         this.createGameMap();
         this.loadMonsters();
         this.setupControls();
         this.animate();
-        
-        // Setup keyboard controls
-        this.setupKeyboardControls();
     }
 
     setupScene() {
@@ -224,8 +222,11 @@ class MonsterGame {
         let loadedCount = 0;
         const totalMonsters = monsterConfigs.length;
 
+        console.log(`Inizio caricamento di ${totalMonsters} modelli...`);
+
         for (const config of monsterConfigs) {
             try {
+                console.log(`Caricamento ${config.name} da ${config.file}...`);
                 const gltf = await this.loadGLTF(loader, `modelli_3D/${config.file}`);
                 
                 const monster = gltf.scene;
@@ -248,21 +249,32 @@ class MonsterGame {
                     isMoving: false,
                     movementAngle: Math.random() * Math.PI * 2,
                     idleAnimation: { time: Math.random() * Math.PI * 2 },
-                    isBuilding: config.isBuilding || false
+                    isBuilding: config.isBuilding || false,
+                    isWalking: false,
+                    walkAnimationId: null
                 };
 
                 loadedCount++;
-                console.log(`✓ Caricato: ${config.name}`);
+                console.log(`✓ Caricato: ${config.name} (${loadedCount}/${totalMonsters})`);
+                
+                // Update loading text
+                document.getElementById('loading').querySelector('p').textContent = 
+                    `Caricamento ${loadedCount}/${totalMonsters} mostriciattoli...`;
 
             } catch (error) {
-                console.error(`Errore caricamento ${config.name}:`, error);
+                console.error(`❌ Errore caricamento ${config.name}:`, error);
+                console.error(`File: modelli_3D/${config.file}`);
             }
         }
 
         // Hide loading screen and show UI
-        if (loadedCount > 0) {
-            document.getElementById('loading').classList.add('hidden');
-            document.getElementById('ui-overlay').classList.remove('hidden');
+        console.log(`Caricamento completato: ${loadedCount}/${totalMonsters} modelli`);
+        document.getElementById('loading').classList.add('hidden');
+        document.getElementById('ui-overlay').classList.remove('hidden');
+        
+        if (loadedCount === 0) {
+            alert('Errore: Nessun modello caricato. Controlla la console per dettagli.');
+        } else {
             console.log(`🎮 Gioco pronto! ${loadedCount}/${totalMonsters} mostri caricati`);
         }
     }
@@ -317,6 +329,9 @@ class MonsterGame {
             case 'spin':
                 this.spinAnimation(monster);
                 break;
+            case 'walk':
+                this.walkAnimation(monster);
+                break;
         }
     }
 
@@ -363,6 +378,50 @@ class MonsterGame {
         spin();
     }
 
+    walkAnimation(monster) {
+        // Stop if already walking
+        if (monster.isWalking) {
+            monster.isWalking = false;
+            monster.walkAnimationId = null;
+            return;
+        }
+
+        monster.isWalking = true;
+        const startPos = { ...monster.model.position };
+        const walkDistance = 15;
+        const duration = 3000;
+        const startTime = Date.now();
+        
+        const walk = () => {
+            if (!monster.isWalking) return;
+            
+            const elapsed = Date.now() - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            
+            // Linear movement forward
+            monster.model.position.x = startPos.x + (progress * walkDistance);
+            
+            // Walking bob (up and down motion)
+            const bobFrequency = 8;
+            const bobAmount = 0.3;
+            monster.model.position.y = startPos.y + Math.abs(Math.sin(progress * Math.PI * bobFrequency)) * bobAmount;
+            
+            // Slight rotation while walking
+            monster.model.rotation.z = Math.sin(progress * Math.PI * bobFrequency) * 0.1;
+
+            if (progress < 1) {
+                monster.walkAnimationId = requestAnimationFrame(walk);
+            } else {
+                // Reset position and rotation
+                monster.model.position.y = startPos.y;
+                monster.model.rotation.z = 0;
+                monster.isWalking = false;
+            }
+        };
+
+        walk();
+    }
+
     toggleMovement(monsterName) {
         const monster = this.monsters[monsterName];
         if (!monster) return;
@@ -396,6 +455,8 @@ class MonsterGame {
     }
 
     updateCamera(deltaTime) {
+        if (!this.keys) return; // Safety check
+        
         const moveSpeed = 15 * deltaTime;
         const direction = new THREE.Vector3();
 
