@@ -1,8 +1,6 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { Monster, PlayerInventory, MONSTER_SPECIES, ITEMS, NPCS } from './game-data.js';
-import { UIManager } from './ui-manager.js';
 
 class RPGGame {
     constructor() {
@@ -14,26 +12,21 @@ class RPGGame {
         this.currentMap = 'village'; // 'village' or 'wild'
         this.buildings = {};
         this.wildMonsters = [];
-        this.playerTeam = []; // Changed from caughtMonsters to playerTeam (Monster objects)
-        this.inventory = new PlayerInventory();
+        this.caughtMonsters = [];
         this.nearestInteractable = null;
         this.inBattle = false;
         this.currentBattleMonster = null;
-        this.currentBattleEnemyMonster = null;
-        this.battleTurn = 'player';
-        this.npcs = {};
         
         // Player movement
         this.keys = {
             w: false, a: false, s: false, d: false,
-            shift: false, e: false, m: false, escape: false
+            shift: false, e: false, m: false
         };
         this.playerSpeed = 5;
         this.playerRotation = 0;
         
         this.clock = new THREE.Clock();
         this.loader = new GLTFLoader();
-        this.uiManager = null;
         
         this.init();
     }
@@ -43,11 +36,6 @@ class RPGGame {
         this.setupLights();
         this.setupControls();
         this.setupKeyboard();
-        
-        // Initialize UI Manager
-        this.uiManager = new UIManager(this);
-        window.uiManager = this.uiManager; // Make accessible globally for onclick handlers
-        window.rpgGame = this; // Make game accessible globally
         
         await this.loadPlayer();
         await this.createVillageMap();
@@ -108,15 +96,10 @@ class RPGGame {
     setupKeyboard() {
         window.addEventListener('keydown', (e) => {
             const key = e.key.toLowerCase();
-            if (key === 'escape') {
-                if (!this.inBattle) {
-                    this.uiManager.toggleMainMenu();
-                }
-                e.preventDefault();
-            } else if (key in this.keys) {
+            if (key in this.keys) {
                 this.keys[key] = true;
-                if (key === 'e' && !this.inBattle && !this.uiManager.isMenuOpen()) this.interact();
-                if (key === 'm' && !this.inBattle && !this.uiManager.isMenuOpen()) this.switchMap();
+                if (key === 'e' && !this.inBattle) this.interact();
+                if (key === 'm' && !this.inBattle) this.switchMap();
             }
         });
 
@@ -173,10 +156,6 @@ class RPGGame {
         this.createHouse(15, 0, 15, 0x6bcfff);
         this.createHouse(0, 0, -25, 0xffd700);
 
-        // Add NPC Trainers
-        this.createNPCTrainer('trainer1', -25, 0, 0, 0xff0000);
-        this.createNPCTrainer('trainer2', 25, 0, 5, 0x0000ff);
-
         // Add decorations
         this.createTrees();
         this.createFences();
@@ -195,7 +174,6 @@ class RPGGame {
         objectsToRemove.forEach(obj => this.scene.remove(obj));
         this.buildings = {};
         this.wildMonsters = [];
-        this.npcs = {};
 
         // Create wild terrain
         const groundGeometry = new THREE.PlaneGeometry(100, 100, 30, 30);
@@ -218,9 +196,6 @@ class RPGGame {
 
         // Spawn wild monsters
         await this.spawnWildMonsters();
-        
-        // Add NPC Trainer in wild area
-        this.createNPCTrainer('trainer3', 0, 0, -30, 0x00ff00);
         
         // Add nature elements
         this.createTrees(true);
@@ -347,44 +322,6 @@ class RPGGame {
         path.position.set(x, 0.05, z);
         path.receiveShadow = true;
         this.scene.add(path);
-    }
-
-    createNPCTrainer(npcId, x, y, z, color) {
-        const npcGroup = new THREE.Group();
-        
-        // Body
-        const bodyGeometry = new THREE.CylinderGeometry(0.8, 0.8, 3, 8);
-        const bodyMaterial = new THREE.MeshStandardMaterial({ color: color });
-        const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
-        body.castShadow = true;
-        body.receiveShadow = true;
-        npcGroup.add(body);
-        
-        // Head
-        const headGeometry = new THREE.SphereGeometry(0.7, 16, 16);
-        const headMaterial = new THREE.MeshStandardMaterial({ color: 0xffdbac });
-        const head = new THREE.Mesh(headGeometry, headMaterial);
-        head.position.y = 2.2;
-        head.castShadow = true;
-        npcGroup.add(head);
-        
-        // Exclamation mark (indicator)
-        const markGeometry = new THREE.BoxGeometry(0.3, 1, 0.1);
-        const markMaterial = new THREE.MeshStandardMaterial({ color: 0xffff00 });
-        const mark = new THREE.Mesh(markGeometry, markMaterial);
-        mark.position.y = 4;
-        npcGroup.add(mark);
-        
-        npcGroup.position.set(x, y + 1.5, z);
-        npcGroup.userData.type = 'npc-trainer';
-        npcGroup.userData.id = npcId;
-        npcGroup.userData.interactable = true;
-        npcGroup.userData.npcData = NPCS[npcId];
-        
-        this.scene.add(npcGroup);
-        this.npcs[npcId] = npcGroup;
-        
-        console.log(`✓ NPC ${npcId} creato`);
     }
 
     createTrees(dense = false) {
@@ -566,14 +503,6 @@ class RPGGame {
                 }
             });
         }
-        
-        // Check NPCs
-        Object.values(this.npcs).forEach(npc => {
-            const distance = this.player.position.distanceTo(npc.position);
-            if (distance < interactionDistance) {
-                this.nearestInteractable = npc;
-            }
-        });
     }
 
     interact() {
@@ -582,254 +511,94 @@ class RPGGame {
         if (this.nearestInteractable.userData.type === 'building') {
             this.interactWithBuilding(this.nearestInteractable.userData.id);
         } else if (this.nearestInteractable.userData.type === 'wild-monster') {
-            this.startWildBattle(this.nearestInteractable);
-        } else if (this.nearestInteractable.userData.type === 'npc-trainer') {
-            this.interactWithNPC(this.nearestInteractable);
-        }
-    }
-    
-    interactWithNPC(npc) {
-        const npcData = npc.userData.npcData;
-        
-        if (npcData.defeated) {
-            alert(`${npcData.name}: Sei davvero forte! Continua così!`);
-            return;
-        }
-        
-        if (confirm(`${npcData.name}: ${npcData.dialogue}`)) {
-            this.startTrainerBattle(npc);
+            this.startBattle(this.nearestInteractable);
         }
     }
 
     interactWithBuilding(buildingId) {
+        const prompt = document.getElementById('interaction-prompt');
+        const title = document.getElementById('prompt-title');
+        const text = document.getElementById('prompt-text');
+        const buttons = document.getElementById('prompt-buttons');
+
         if (buildingId === 'pokecenter') {
-            this.healMonsters();
+            title.textContent = '🏥 Pokémon Center';
+            text.textContent = 'Benvenuto! Vuoi curare i tuoi mostri?';
+            buttons.innerHTML = '<button onclick="rpgGame.healMonsters()">Cura</button><button onclick="rpgGame.closePrompt()">Esci</button>';
         } else if (buildingId === 'market') {
-            this.uiManager.showShopMenu();
+            title.textContent = '🏪 Nigrolino Market';
+            text.textContent = 'Benvenuto! Cosa desideri?';
+            buttons.innerHTML = '<button onclick="rpgGame.buyItems()">Compra</button><button onclick="rpgGame.closePrompt()">Esci</button>';
         } else {
-            alert('Sembra che non ci sia nessuno...');
+            title.textContent = '🏠 Casa';
+            text.textContent = 'Sembra che non ci sia nessuno...';
+            buttons.innerHTML = '<button onclick="rpgGame.closePrompt()">Esci</button>';
         }
-    }
-    
-    healMonsters() {
-        this.playerTeam.forEach(monster => {
-            monster.currentHP = monster.maxHP;
-        });
-        alert('I tuoi mostri sono stati curati completamente!');
-        this.uiManager.updateTeamDisplay();
+
+        prompt.classList.add('show');
     }
 
-    startWildBattle(monsterMesh) {
-        if (this.playerTeam.length === 0) {
-            alert('Non hai mostri nella squadra! Cattura un mostro usando una Poké Ball!');
-            return;
-        }
-        
-        if (this.playerTeam.length >= 6) {
+    startBattle(monster) {
+        if (this.caughtMonsters.length >= 6) {
             alert('Hai già 6 mostri! Non puoi catturarne altri.');
             return;
         }
 
         this.inBattle = true;
-        this.currentBattleMonster = monsterMesh;
+        this.currentBattleMonster = monster;
         
-        // Create enemy monster instance
-        const speciesKey = monsterMesh.userData.name.replace(' ', '_');
-        const level = 3 + Math.floor(Math.random() * 5); // Random level 3-7
-        this.currentBattleEnemyMonster = new Monster(speciesKey, level);
-        
-        // Hide old battle UI, show new one
-        document.getElementById('battle-screen').classList.remove('active');
-        document.getElementById('battle-ui').classList.remove('hidden');
-        
-        this.uiManager.clearBattleLog();
-        this.uiManager.addBattleLog(`Un ${this.currentBattleEnemyMonster.name} selvaggio è apparso!`);
-        this.uiManager.updateBattleUI(this.playerTeam[0], this.currentBattleEnemyMonster);
-    }
-    
-    startTrainerBattle(npcMesh) {
-        if (this.playerTeam.length === 0) {
-            alert('Non hai mostri nella squadra! Cattura un mostro prima di combattere!');
-            return;
-        }
-        
-        this.inBattle = true;
-        this.currentTrainer = npcMesh;
-        
-        // Create trainer's first monster
-        const trainerData = npcMesh.userData.npcData;
-        const firstMonster = trainerData.team[0];
-        this.currentBattleEnemyMonster = new Monster(firstMonster.species, firstMonster.level);
-        this.trainerTeamIndex = 0;
-        
-        document.getElementById('battle-ui').classList.remove('hidden');
-        this.uiManager.clearBattleLog();
-        this.uiManager.addBattleLog(`${trainerData.name} ti sfida a battaglia!`);
-        this.uiManager.addBattleLog(`${trainerData.name} manda in campo ${this.currentBattleEnemyMonster.name}!`);
-        this.uiManager.updateBattleUI(this.playerTeam[0], this.currentBattleEnemyMonster);
+        document.getElementById('monster-name').textContent = monster.userData.name;
+        document.getElementById('battle-screen').classList.add('active');
     }
 
-    handleBattleAction(action) {
-        if (action === 'attack') {
-            this.battleAttack();
-        } else if (action === 'catch') {
-            if (this.currentTrainer) {
-                this.uiManager.addBattleLog('Non puoi catturare i mostri degli allenatori!');
-                return;
-            }
-            this.uiManager.showBattleItemSelection();
-        } else if (action === 'item') {
-            this.uiManager.showBattleItemSelection();
-        } else if (action === 'run') {
-            if (this.currentTrainer) {
-                this.uiManager.addBattleLog('Non puoi scappare da una battaglia con un allenatore!');
-                return;
-            }
-            this.runFromBattle();
-        }
-    }
-    
-    battleAttack() {
-        const playerMonster = this.playerTeam[0];
-        const enemyMonster = this.currentBattleEnemyMonster;
+    attemptCatch() {
+        const catchChance = Math.random();
         
-        // Calculate damage (simplified Pokemon formula)
-        const attackerAttack = playerMonster.attack;
-        const defenderDefense = enemyMonster.defense;
-        const baseDamage = Math.floor(((2 * playerMonster.level / 5 + 2) * 50 * attackerAttack / defenderDefense) / 50) + 2;
-        const damage = Math.floor(baseDamage * (0.85 + Math.random() * 0.15));
-        
-        const enemyDied = enemyMonster.takeDamage(damage);
-        this.uiManager.addBattleLog(`${playerMonster.name} attacca! ${damage} HP di danno!`);
-        this.uiManager.updateBattleUI(playerMonster, enemyMonster);
-        
-        if (enemyDied) {
-            setTimeout(() => this.handleEnemyDefeated(), 1000);
-            return;
-        }
-        
-        // Enemy turn
-        setTimeout(() => this.enemyAttack(), 1500);
-    }
-    
-    enemyAttack() {
-        const playerMonster = this.playerTeam[0];
-        const enemyMonster = this.currentBattleEnemyMonster;
-        
-        const attackerAttack = enemyMonster.attack;
-        const defenderDefense = playerMonster.defense;
-        const baseDamage = Math.floor(((2 * enemyMonster.level / 5 + 2) * 50 * attackerAttack / defenderDefense) / 50) + 2;
-        const damage = Math.floor(baseDamage * (0.85 + Math.random() * 0.15));
-        
-        const playerDied = playerMonster.takeDamage(damage);
-        this.uiManager.addBattleLog(`${enemyMonster.name} attacca! ${damage} HP di danno!`);
-        this.uiManager.updateBattleUI(playerMonster, enemyMonster);
-        
-        if (playerDied) {
-            setTimeout(() => {
-                this.uiManager.addBattleLog(`${playerMonster.name} è esausto!`);
-                setTimeout(() => this.endBattle(false), 2000);
-            }, 1000);
-        }
-    }
-    
-    handleEnemyDefeated() {
-        const playerMonster = this.playerTeam[0];
-        const expGained = MONSTER_SPECIES[this.currentBattleEnemyMonster.species].expYield;
-        
-        this.uiManager.addBattleLog(`${this.currentBattleEnemyMonster.name} è esausto!`);
-        this.uiManager.addBattleLog(`${playerMonster.name} ha guadagnato ${expGained} EXP!`);
-        
-        const leveledUp = playerMonster.gainExp(expGained);
-        if (leveledUp) {
-            this.uiManager.addBattleLog(`${playerMonster.name} è salito al livello ${playerMonster.level}!`);
-        }
-        
-        this.uiManager.updateBattleUI(playerMonster, this.currentBattleEnemyMonster);
-        
-        if (this.currentTrainer) {
-            // Trainer battle - check for next monster
-            this.trainerTeamIndex++;
-            const trainerData = this.currentTrainer.userData.npcData;
+        if (catchChance > 0.3) { // 70% catch rate
+            this.caughtMonsters.push(this.currentBattleMonster.userData.name);
+            document.getElementById('caught-count').textContent = this.caughtMonsters.length;
             
-            if (this.trainerTeamIndex < trainerData.team.length) {
-                setTimeout(() => {
-                    const nextMonster = trainerData.team[this.trainerTeamIndex];
-                    this.currentBattleEnemyMonster = new Monster(nextMonster.species, nextMonster.level);
-                    this.uiManager.addBattleLog(`${trainerData.name} manda in campo ${this.currentBattleEnemyMonster.name}!`);
-                    this.uiManager.updateBattleUI(playerMonster, this.currentBattleEnemyMonster);
-                }, 2000);
-            } else {
-                // Trainer defeated
-                setTimeout(() => {
-                    this.inventory.money += trainerData.reward;
-                    this.uiManager.addBattleLog(`Hai sconfitto ${trainerData.name}!`);
-                    this.uiManager.addBattleLog(`Hai ricevuto ${trainerData.reward} monete!`);
-                    trainerData.defeated = true;
-                    // Remove exclamation mark from NPC
-                    this.currentTrainer.children[2].visible = false;
-                    setTimeout(() => this.endBattle(true), 3000);
-                }, 2000);
-            }
+            // Remove monster from scene
+            this.scene.remove(this.currentBattleMonster);
+            const index = this.wildMonsters.indexOf(this.currentBattleMonster);
+            if (index > -1) this.wildMonsters.splice(index, 1);
+            
+            document.getElementById('battle-text').textContent = 
+                `Fantastico! Hai catturato ${this.currentBattleMonster.userData.name}!`;
+            
+            setTimeout(() => this.endBattle(), 2000);
         } else {
-            // Wild battle - remove monster from scene
-            setTimeout(() => this.endBattle(true), 2000);
-        }
-    }
-    
-    useCatchItem(itemId) {
-        if (!this.inventory.useItem(itemId)) {
-            this.uiManager.addBattleLog('Non hai questo oggetto!');
-            return;
-        }
-        
-        const item = ITEMS[itemId];
-        const enemyMonster = this.currentBattleEnemyMonster;
-        const speciesData = MONSTER_SPECIES[enemyMonster.species];
-        
-        // Calculate catch chance
-        const hpFactor = (enemyMonster.maxHP - enemyMonster.currentHP) / enemyMonster.maxHP;
-        const catchChance = speciesData.catchRate * item.catchBonus * (1 + hpFactor * 0.5);
-        
-        this.uiManager.addBattleLog(`Hai lanciato una ${item.name}!`);
-        
-        if (Math.random() < catchChance) {
-            this.uiManager.addBattleLog(`Fantastico! Hai catturato ${enemyMonster.name}!`);
+            document.getElementById('battle-text').textContent = 
+                `Oh no! ${this.currentBattleMonster.userData.name} è scappato!`;
             
-            // Add to team
-            this.playerTeam.push(enemyMonster);
-            
-            // Remove from scene
-            if (this.currentBattleMonster) {
-                this.scene.remove(this.currentBattleMonster);
-                const index = this.wildMonsters.indexOf(this.currentBattleMonster);
-                if (index > -1) this.wildMonsters.splice(index, 1);
-            }
-            
-            this.uiManager.updatePlayerInfo();
-            setTimeout(() => this.endBattle(true), 2000);
-        } else {
-            this.uiManager.addBattleLog(`Oh no! ${enemyMonster.name} è scappato dalla sfera!`);
-            setTimeout(() => this.enemyAttack(), 1500);
+            setTimeout(() => this.endBattle(), 1500);
         }
     }
 
     runFromBattle() {
-        this.uiManager.addBattleLog('Sei scappato dalla battaglia!');
-        setTimeout(() => this.endBattle(false), 1500);
+        document.getElementById('battle-text').textContent = 'Sei scappato!';
+        setTimeout(() => this.endBattle(), 1000);
     }
 
-    endBattle(won) {
+    endBattle() {
         this.inBattle = false;
         this.currentBattleMonster = null;
-        this.currentBattleEnemyMonster = null;
-        this.currentTrainer = null;
-        this.trainerTeamIndex = 0;
-        
-        document.getElementById('battle-ui').classList.add('hidden');
         document.getElementById('battle-screen').classList.remove('active');
-        
-        this.uiManager.updateAllDisplays();
+        document.getElementById('battle-text').textContent = 'Un mostriciattolo è apparso!';
+    }
+
+    healMonsters() {
+        alert('I tuoi mostri sono stati curati!');
+        this.closePrompt();
+    }
+
+    buyItems() {
+        alert('Funzionalità in sviluppo!');
+        this.closePrompt();
+    }
+
+    closePrompt() {
+        document.getElementById('interaction-prompt').classList.remove('show');
     }
 
     async switchMap() {
@@ -884,52 +653,6 @@ class RPGGame {
 
     hideLoading() {
         document.getElementById('loading').classList.add('hidden');
-    }
-    
-    saveGame() {
-        const saveData = {
-            team: this.playerTeam.map(m => m.toJSON()),
-            inventory: this.inventory.toJSON(),
-            currentMap: this.currentMap,
-            npcs: {},
-            timestamp: Date.now()
-        };
-        
-        // Save NPC defeated status
-        Object.keys(NPCS).forEach(npcId => {
-            saveData.npcs[npcId] = NPCS[npcId].defeated;
-        });
-        
-        localStorage.setItem('monsterquest_save', JSON.stringify(saveData));
-        console.log('Game saved!');
-    }
-    
-    loadGame() {
-        const savedData = localStorage.getItem('monsterquest_save');
-        if (!savedData) {
-            return false;
-        }
-        
-        const data = JSON.parse(savedData);
-        
-        // Restore team
-        this.playerTeam = data.team.map(m => Monster.fromJSON(m));
-        
-        // Restore inventory
-        this.inventory = PlayerInventory.fromJSON(data.inventory);
-        
-        // Restore NPC status
-        Object.keys(data.npcs).forEach(npcId => {
-            if (NPCS[npcId]) {
-                NPCS[npcId].defeated = data.npcs[npcId];
-            }
-        });
-        
-        // Update UI
-        this.uiManager.updateAllDisplays();
-        
-        console.log('Game loaded!');
-        return true;
     }
 }
 
