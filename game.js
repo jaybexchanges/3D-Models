@@ -251,11 +251,23 @@ class MonsterGame {
                     idleAnimation: { time: Math.random() * Math.PI * 2 },
                     isBuilding: config.isBuilding || false,
                     isWalking: false,
-                    walkAnimationId: null
+                    walkAnimationId: null,
+                    bones: this.findBones(monster),
+                    mixer: null,
+                    animations: gltf.animations || []
                 };
 
                 loadedCount++;
                 console.log(`✓ Caricato: ${config.name} (${loadedCount}/${totalMonsters})`);
+                
+                // Log bones info for debugging
+                if (gltf.scene) {
+                    gltf.scene.traverse((node) => {
+                        if (node.isBone) {
+                            console.log(`  Bone found: ${node.name}`);
+                        }
+                    });
+                }
                 
                 // Update loading text
                 document.getElementById('loading').querySelector('p').textContent = 
@@ -378,11 +390,50 @@ class MonsterGame {
         spin();
     }
 
+    findBones(model) {
+        const bones = {
+            leftLeg: null,
+            rightLeg: null,
+            leftKnee: null,
+            rightKnee: null,
+            leftFoot: null,
+            rightFoot: null
+        };
+
+        model.traverse((node) => {
+            if (node.isBone) {
+                const nameLower = node.name.toLowerCase();
+                
+                // Try to identify leg bones by common naming conventions
+                if (nameLower.includes('left') && nameLower.includes('leg') || nameLower.includes('thigh')) {
+                    bones.leftLeg = node;
+                } else if (nameLower.includes('right') && nameLower.includes('leg') || nameLower.includes('thigh')) {
+                    bones.rightLeg = node;
+                } else if (nameLower.includes('left') && (nameLower.includes('knee') || nameLower.includes('shin') || nameLower.includes('calf'))) {
+                    bones.leftKnee = node;
+                } else if (nameLower.includes('right') && (nameLower.includes('knee') || nameLower.includes('shin') || nameLower.includes('calf'))) {
+                    bones.rightKnee = node;
+                } else if (nameLower.includes('left') && nameLower.includes('foot')) {
+                    bones.leftFoot = node;
+                } else if (nameLower.includes('right') && nameLower.includes('foot')) {
+                    bones.rightFoot = node;
+                }
+            }
+        });
+
+        return bones;
+    }
+
     walkAnimation(monster) {
         // Stop if already walking
         if (monster.isWalking) {
             monster.isWalking = false;
-            monster.walkAnimationId = null;
+            if (monster.walkAnimationId) {
+                cancelAnimationFrame(monster.walkAnimationId);
+                monster.walkAnimationId = null;
+            }
+            // Reset bone rotations
+            this.resetBoneRotations(monster);
             return;
         }
 
@@ -391,6 +442,11 @@ class MonsterGame {
         const walkDistance = 15;
         const duration = 3000;
         const startTime = Date.now();
+        
+        // Store original bone rotations
+        if (!monster.originalBoneRotations) {
+            monster.originalBoneRotations = this.saveBoneRotations(monster);
+        }
         
         const walk = () => {
             if (!monster.isWalking) return;
@@ -403,23 +459,84 @@ class MonsterGame {
             
             // Walking bob (up and down motion)
             const bobFrequency = 8;
-            const bobAmount = 0.3;
+            const bobAmount = 0.15;
             monster.model.position.y = startPos.y + Math.abs(Math.sin(progress * Math.PI * bobFrequency)) * bobAmount;
             
-            // Slight rotation while walking
-            monster.model.rotation.z = Math.sin(progress * Math.PI * bobFrequency) * 0.1;
+            // Animate leg bones if available
+            this.animateLegs(monster, progress * Math.PI * bobFrequency);
 
             if (progress < 1) {
                 monster.walkAnimationId = requestAnimationFrame(walk);
             } else {
-                // Reset position and rotation
+                // Reset position and bones
                 monster.model.position.y = startPos.y;
-                monster.model.rotation.z = 0;
+                this.resetBoneRotations(monster);
                 monster.isWalking = false;
             }
         };
 
         walk();
+    }
+
+    saveBoneRotations(monster) {
+        const saved = {};
+        if (monster.bones) {
+            Object.keys(monster.bones).forEach(key => {
+                const bone = monster.bones[key];
+                if (bone) {
+                    saved[key] = {
+                        x: bone.rotation.x,
+                        y: bone.rotation.y,
+                        z: bone.rotation.z
+                    };
+                }
+            });
+        }
+        return saved;
+    }
+
+    resetBoneRotations(monster) {
+        if (monster.originalBoneRotations && monster.bones) {
+            Object.keys(monster.originalBoneRotations).forEach(key => {
+                const bone = monster.bones[key];
+                if (bone && monster.originalBoneRotations[key]) {
+                    bone.rotation.x = monster.originalBoneRotations[key].x;
+                    bone.rotation.y = monster.originalBoneRotations[key].y;
+                    bone.rotation.z = monster.originalBoneRotations[key].z;
+                }
+            });
+        }
+    }
+
+    animateLegs(monster, phase) {
+        if (!monster.bones) return;
+
+        const legSwingAmount = 0.8; // Increased for more visible movement
+        const kneeSwingAmount = 0.6;
+        
+        // Left leg moves opposite to right leg
+        if (monster.bones.leftLeg) {
+            monster.bones.leftLeg.rotation.x = Math.sin(phase) * legSwingAmount;
+        }
+        if (monster.bones.rightLeg) {
+            monster.bones.rightLeg.rotation.x = Math.sin(phase + Math.PI) * legSwingAmount;
+        }
+
+        // Knees bend when leg swings back
+        if (monster.bones.leftKnee) {
+            monster.bones.leftKnee.rotation.x = Math.max(0, -Math.sin(phase)) * kneeSwingAmount;
+        }
+        if (monster.bones.rightKnee) {
+            monster.bones.rightKnee.rotation.x = Math.max(0, -Math.sin(phase + Math.PI)) * kneeSwingAmount;
+        }
+
+        // Subtle foot rotation
+        if (monster.bones.leftFoot) {
+            monster.bones.leftFoot.rotation.x = Math.sin(phase) * 0.3;
+        }
+        if (monster.bones.rightFoot) {
+            monster.bones.rightFoot.rotation.x = Math.sin(phase + Math.PI) * 0.3;
+        }
     }
 
     toggleMovement(monsterName) {
