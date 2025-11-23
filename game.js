@@ -217,7 +217,8 @@ class MonsterGame {
             { name: 'pyrolynx', file: 'Pyrolynx.glb', position: { x: -5, y: 2, z: 8 }, scale: 2 },
             { name: 'player1', file: 'Player_1.glb', position: { x: 5, y: 2, z: 8 }, scale: 2 },
             { name: 'player2', file: 'Player_2.glb', position: { x: 15, y: 2, z: 8 }, scale: 2 },
-            { name: 'pokecenter', file: 'Pokémon_Center.glb', position: { x: 0, y: 2, z: 0 }, scale: 3, isBuilding: true }
+            { name: 'pokecenter', file: 'Pokémon_Center.glb', position: { x: 0, y: 2, z: 0 }, scale: 3, isBuilding: true },
+            { name: 'nigrolino', file: 'Nigrolino_market.glb', position: { x: -20, y: 2, z: 0 }, scale: 3, isBuilding: true }
         ];
 
         let loadedCount = 0;
