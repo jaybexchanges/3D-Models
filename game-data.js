@@ -152,7 +152,9 @@ export class Monster {
     }
     
     calculateStat(baseStat, level) {
-        // Pokemon-like stat calculation
+        // Pokemon-like stat calculation formula
+        // Formula: ((2 * BaseStat * Level) / 100) + Level + 10
+        // Where: 2 = stat multiplier, 100 = level scaling factor, 10 = base offset
         return Math.floor(((2 * baseStat * level) / 100) + level + 10);
     }
     
