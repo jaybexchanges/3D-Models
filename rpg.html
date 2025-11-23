@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MonsterQuest RPG - Pokémon-like Game</title>
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"
+        }
+    }
+    </script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Press Start 2P', monospace;
+            overflow: hidden;
+            background: #1a1a2e;
+        }
+
+        #canvas-container {
+            width: 100vw;
+            height: 100vh;
+        }
+
+        #hud {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        #location-info {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 15px 20px;
+            border-radius: 10px;
+            border: 3px solid #ffd700;
+            font-size: 12px;
+        }
+
+        #location-info h2 {
+            color: #ffd700;
+            margin-bottom: 5px;
+            font-size: 14px;
+        }
+
+        #controls-help {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            border: 2px solid #00d9ff;
+            font-size: 10px;
+            max-width: 300px;
+        }
+
+        .control-line {
+            margin: 5px 0;
+            color: #b0b0b0;
+        }
+
+        .control-key {
+            color: #00d9ff;
+            font-weight: bold;
+        }
+
+        #monster-counter {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 15px 20px;
+            border-radius: 10px;
+            border: 3px solid #ff6b6b;
+            font-size: 11px;
+        }
+
+        #interaction-prompt {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.95);
+            color: white;
+            padding: 20px 30px;
+            border-radius: 15px;
+            border: 3px solid #ffd700;
+            font-size: 12px;
+            display: none;
+            pointer-events: auto;
+            text-align: center;
+            max-width: 400px;
+            z-index: 100;
+        }
+
+        #interaction-prompt.show {
+            display: block;
+        }
+
+        #interaction-prompt button {
+            margin: 10px 5px 0;
+            padding: 10px 20px;
+            background: #4CAF50;
+            color: white;
+            border: 2px solid #45a049;
+            border-radius: 5px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 10px;
+            pointer-events: auto;
+        }
+
+        #interaction-prompt button:hover {
+            background: #45a049;
+        }
+
+        #battle-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            z-index: 200;
+        }
+
+        #battle-screen.active {
+            display: flex;
+        }
+
+        .battle-info {
+            background: rgba(0, 0, 0, 0.9);
+            padding: 30px;
+            border-radius: 20px;
+            border: 4px solid #ffd700;
+            text-align: center;
+            color: white;
+        }
+
+        .battle-info h2 {
+            color: #ff6b6b;
+            font-size: 20px;
+            margin-bottom: 20px;
+        }
+
+        .battle-actions {
+            margin-top: 20px;
+        }
+
+        .battle-actions button {
+            margin: 10px;
+            padding: 15px 30px;
+            font-size: 12px;
+            background: #ff6b6b;
+            color: white;
+            border: 3px solid #ff5252;
+            border-radius: 10px;
+            cursor: pointer;
+            font-family: inherit;
+        }
+
+        .battle-actions button:hover {
+            background: #ff5252;
+        }
+
+        #loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 16px;
+            text-align: center;
+            z-index: 1000;
+        }
+
+        .loader {
+            border: 5px solid rgba(255, 255, 255, 0.1);
+            border-top: 5px solid #00d9ff;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        #minimap {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            width: 150px;
+            height: 150px;
+            background: rgba(0, 0, 0, 0.7);
+            border: 2px solid #00d9ff;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div id="loading">
+        <div class="loader"></div>
+        <p>Caricamento MonsterQuest...</p>
+    </div>
+
+    <div id="canvas-container"></div>
+
+    <div id="hud">
+        <div id="location-info">
+            <h2>🏘️ Villaggio Iniziale</h2>
+            <p>Benvenuto nel mondo dei mostri!</p>
+        </div>
+
+        <div id="monster-counter">
+            <div>👾 Mostri catturati: <span id="caught-count">0</span>/6</div>
+        </div>
+
+        <div id="controls-help">
+            <div class="control-line"><span class="control-key">WASD</span> - Movimento</div>
+            <div class="control-line"><span class="control-key">SHIFT</span> - Corri</div>
+            <div class="control-line"><span class="control-key">E</span> - Interagisci</div>
+            <div class="control-line"><span class="control-key">M</span> - Cambia Mappa</div>
+            <div class="control-line"><span class="control-key">Mouse</span> - Ruota camera</div>
+        </div>
+
+        <canvas id="minimap"></canvas>
+    </div>
+
+    <div id="interaction-prompt">
+        <h3 id="prompt-title">Interazione</h3>
+        <p id="prompt-text">Premi E per interagire</p>
+        <div id="prompt-buttons"></div>
+    </div>
+
+    <div id="battle-screen">
+        <div class="battle-info">
+            <h2 id="battle-title">⚔️ Mostriciattolo Selvaggio!</h2>
+            <p id="battle-text">Un <span id="monster-name"></span> è apparso!</p>
+            <div class="battle-actions">
+                <button onclick="rpgGame.attemptCatch()">🎯 Cattura</button>
+                <button onclick="rpgGame.runFromBattle()">🏃 Fuggi</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="rpg-game.js"></script>
+</body>
+</html>
