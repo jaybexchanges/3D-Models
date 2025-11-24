@@ -220,7 +220,7 @@ export const MOVES = {
 export const MONSTER_SPECIES = {
     'Blue_Puffball': {
         name: 'Blue Puffball',
-        types: [ELEMENT_TYPES.WATER, ELEMENT_TYPES.FAIRY],
+        types: [ELEMENT_TYPES.WATER],
         baseHP: 45,
         baseAttack: 49,
         baseDefense: 49,
@@ -230,19 +230,16 @@ export const MONSTER_SPECIES = {
         learnset: {
             1: 'TACKLE',
             7: 'WATER_GUN',
-            10: 'FAIRY_WIND',
-            15: 'BUBBLE_BEAM',
-            20: 'DRAINING_KISS',
-            25: 'WATER_PULSE',
-            30: 'PLAY_ROUGH',
-            35: 'SURF',
-            40: 'MOONBLAST',
-            45: 'HYDRO_PUMP'
+            10: 'BUBBLE_BEAM',
+            15: 'WATER_PULSE',
+            20: 'SURF',
+            25: 'HYDRO_PUMP',
+            30: 'AQUA_TAIL'
         }
     },
     'Gnugnu': {
         name: 'Gnugnu',
-        types: [ELEMENT_TYPES.POISON, ELEMENT_TYPES.DARK],
+        types: [ELEMENT_TYPES.POISON],
         baseHP: 50,
         baseAttack: 55,
         baseDefense: 40,
@@ -253,18 +250,16 @@ export const MONSTER_SPECIES = {
             1: 'SCRATCH',
             8: 'POISON_STING',
             12: 'ACID',
-            16: 'LICK',
-            20: 'VENOSHOCK',
-            24: 'POISON_JAB',
-            28: 'SHADOW_SNEAK',
-            32: 'SLUDGE_BOMB',
-            36: 'TOXIC',
-            40: 'SLUDGE_WAVE'
+            16: 'VENOSHOCK',
+            20: 'POISON_JAB',
+            24: 'TOXIC',
+            28: 'SLUDGE_BOMB',
+            32: 'SLUDGE_WAVE'
         }
     },
     'Lotus': {
         name: 'Lotus',
-        types: [ELEMENT_TYPES.GRASS, ELEMENT_TYPES.FAIRY],
+        types: [ELEMENT_TYPES.GRASS],
         baseHP: 55,
         baseAttack: 45,
         baseDefense: 55,
@@ -274,20 +269,17 @@ export const MONSTER_SPECIES = {
         learnset: {
             1: 'TACKLE',
             7: 'VINE_WHIP',
-            11: 'FAIRY_WIND',
-            15: 'RAZOR_LEAF',
-            19: 'MEGA_DRAIN',
-            23: 'DAZZLING_GLEAM',
-            27: 'SEED_BOMB',
-            31: 'ENERGY_BALL',
-            35: 'MOONBLAST',
-            39: 'SOLAR_BEAM',
-            44: 'PETAL_DANCE'
+            11: 'RAZOR_LEAF',
+            15: 'MEGA_DRAIN',
+            19: 'SEED_BOMB',
+            23: 'ENERGY_BALL',
+            27: 'SOLAR_BEAM',
+            31: 'PETAL_DANCE'
         }
     },
     'Blossom': {
         name: 'Blossom',
-        types: [ELEMENT_TYPES.GRASS, ELEMENT_TYPES.FLYING],
+        types: [ELEMENT_TYPES.GRASS],
         baseHP: 48,
         baseAttack: 52,
         baseDefense: 43,
@@ -308,7 +300,7 @@ export const MONSTER_SPECIES = {
     },
     'LavaFlare': {
         name: 'LavaFlare',
-        types: [ELEMENT_TYPES.FIRE, ELEMENT_TYPES.ROCK],
+        types: [ELEMENT_TYPES.FIRE],
         baseHP: 58,
         baseAttack: 64,
         baseDefense: 50,
@@ -328,7 +320,7 @@ export const MONSTER_SPECIES = {
     },
     'Pyrolynx': {
         name: 'Pyrolynx',
-        types: [ELEMENT_TYPES.FIRE, ELEMENT_TYPES.NORMAL],
+        types: [ELEMENT_TYPES.FIRE],
         baseHP: 52,
         baseAttack: 60,
         baseDefense: 48,

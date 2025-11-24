@@ -25,6 +25,7 @@ class RPGGame {
         this.currentBattleEnemyMonster = null;
         this.battleTurn = 'player';
         this.npcs = {};
+        this.bestiary = new Set(); // Track discovered monsters
         
         // Player movement
         this.keys = {
@@ -643,8 +644,11 @@ class RPGGame {
         
         // Create enemy monster instance
         const speciesKey = monsterMesh.userData.name.replace(' ', '_');
-        const level = 3 + Math.floor(Math.random() * 5); // Random level 3-7
+        const level = 2 + Math.floor(Math.random() * 6); // Random level 2-7
         this.currentBattleEnemyMonster = new Monster(speciesKey, level);
+        
+        // Add to bestiary after first encounter
+        this.addToBestiary(speciesKey);
         
         // Show battle UI
         document.getElementById('battle-ui').classList.remove('hidden');
@@ -963,6 +967,66 @@ class RPGGame {
         
         this.uiManager.updateAllDisplays();
     }
+    
+    addToBestiary(speciesKey) {
+        if (!this.bestiary.has(speciesKey)) {
+            this.bestiary.add(speciesKey);
+            // Update labels on all wild monsters of this species
+            this.updateMonsterLabels();
+        }
+    }
+    
+    updateMonsterLabels() {
+        this.wildMonsters.forEach(monster => {
+            const speciesKey = monster.userData.name.replace(' ', '_');
+            if (this.bestiary.has(speciesKey)) {
+                this.createMonsterLabel(monster);
+            }
+        });
+    }
+    
+    createMonsterLabel(monster) {
+        // Remove old label if it exists
+        if (monster.userData.label) {
+            monster.remove(monster.userData.label);
+        }
+        
+        const speciesKey = monster.userData.name.replace(' ', '_');
+        const speciesData = MONSTER_SPECIES[speciesKey];
+        
+        if (!speciesData) return;
+        
+        // Create a canvas for the label
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+        canvas.width = 256;
+        canvas.height = 64;
+        
+        // Draw background
+        context.fillStyle = 'rgba(0, 0, 0, 0.7)';
+        context.fillRect(0, 0, canvas.width, canvas.height);
+        
+        // Draw text
+        context.font = 'bold 20px Arial';
+        context.fillStyle = '#ffffff';
+        context.textAlign = 'center';
+        context.fillText(speciesData.name, canvas.width / 2, 28);
+        
+        // Draw level (we'll update this dynamically when monster spawns)
+        context.font = '16px Arial';
+        context.fillStyle = '#ffd700';
+        context.fillText('Lv. ???', canvas.width / 2, 50);
+        
+        // Create sprite
+        const texture = new THREE.CanvasTexture(canvas);
+        const spriteMaterial = new THREE.SpriteMaterial({ map: texture });
+        const sprite = new THREE.Sprite(spriteMaterial);
+        sprite.scale.set(4, 1, 1);
+        sprite.position.set(0, 3, 0);
+        
+        monster.add(sprite);
+        monster.userData.label = sprite;
+    }
 
     async switchMap() {
         document.getElementById('loading').classList.remove('hidden');
@@ -1023,6 +1087,7 @@ class RPGGame {
             team: this.playerTeam.map(m => m.toJSON()),
             inventory: this.inventory.toJSON(),
             currentMap: this.currentMap,
+            bestiary: Array.from(this.bestiary),
             npcs: {},
             timestamp: Date.now()
         };
@@ -1049,6 +1114,12 @@ class RPGGame {
         
         // Restore inventory
         this.inventory = PlayerInventory.fromJSON(data.inventory);
+        
+        // Restore bestiary
+        if (data.bestiary) {
+            this.bestiary = new Set(data.bestiary);
+            this.updateMonsterLabels();
+        }
         
         // Restore NPC status
         Object.keys(data.npcs).forEach(npcId => {
