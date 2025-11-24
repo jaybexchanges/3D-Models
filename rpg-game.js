@@ -75,12 +75,15 @@ class RPGGame {
         landingPage.classList.add('fade-out');
         
         // Wait for fade out animation
-        setTimeout(async () => {
+        setTimeout(() => {
             landingPage.style.display = 'none';
             document.getElementById('loading').classList.remove('hidden');
             
-            // Initialize game
-            await this.init(loadSave);
+            // Initialize game (handle async errors)
+            this.init(loadSave).catch(error => {
+                console.error('Failed to initialize game:', error);
+                document.getElementById('loading').innerHTML = '<p>Errore nel caricamento del gioco. Ricarica la pagina.</p>';
+            });
         }, this.LANDING_FADE_DURATION);
     }
 
