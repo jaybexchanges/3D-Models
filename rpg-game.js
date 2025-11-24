@@ -47,6 +47,10 @@ export class RPGGame {
         this.playerBaseHeight = 0.6;
         this.wildNoiseSeed = Math.random() * 1000;
         this.autoStart = autoStart;
+        this.colliders = [];
+        this.doorTriggers = [];
+        this.doorAreas = [];
+        this.currentReturnContext = null;
         
         // Auto-start game
         if (autoStart) {
@@ -90,6 +94,9 @@ export class RPGGame {
         
         await this.loadPlayer();
         await this.createVillageMap();
+        this.currentMap = 'village';
+        this.updateLocationUI('village');
+        this.placeEntityOnGround(this.player, 0, 0);
         
         this.animate();
         this.hideLoading();
@@ -230,6 +237,9 @@ export class RPGGame {
         this.wildMonsters = [];
         this.npcs = {};
         this.getGroundHeight = () => 0;
+        this.colliders = [];
+        this.doorTriggers = [];
+        this.doorAreas = [];
     }
 
     addToCurrentMap(object3d) {
@@ -247,6 +257,91 @@ export class RPGGame {
         const baseHeight = entity.userData?.baseHeight ?? this.playerBaseHeight;
         const groundHeight = this.getGroundHeight ? this.getGroundHeight(x, z) : 0;
         entity.position.set(x, groundHeight + baseHeight + extraHeight, z);
+        entity.updateWorldMatrix(true, true);
+    }
+
+    registerCollider(object, padding = 0) {
+        if (!object) return;
+        object.updateWorldMatrix(true, true);
+        const box = new THREE.Box3().setFromObject(object);
+        if (!box.isEmpty()) {
+            box.min.x -= padding;
+            box.max.x += padding;
+            box.min.z -= padding;
+            box.max.z += padding;
+            this.colliders.push(box);
+        }
+    }
+
+    createDoorTrigger({ position, width = 3, height = 4, depth = 1.5, targetMap, spawn = { x: 0, z: 0 }, returnMap = 'village', returnSpawn = { x: 0, z: 0 }, walkwayDepth = 4, label = 'Entra' }) {
+        const geometry = new THREE.BoxGeometry(width, height, depth);
+        const material = new THREE.MeshBasicMaterial({ visible: false });
+        const door = new THREE.Mesh(geometry, material);
+        door.position.copy(position);
+        door.userData.type = 'door';
+        door.userData.targetMap = targetMap;
+        door.userData.spawn = spawn;
+        door.userData.returnMap = returnMap;
+        door.userData.returnSpawn = returnSpawn;
+        door.userData.label = label;
+        this.addToCurrentMap(door);
+        this.doorTriggers.push(door);
+
+        const halfWidth = width / 2;
+        const doorArea = {
+            minX: position.x - halfWidth,
+            maxX: position.x + halfWidth,
+            minZ: position.z - walkwayDepth * 0.5,
+            maxZ: position.z + walkwayDepth
+        };
+        this.doorAreas.push(doorArea);
+        return door;
+    }
+
+    createBuildingDoor(building, { targetMap, spawn, returnMap = 'village', returnSpawn, width, height, depth, offsetX = 0, forwardOffset = 1.8, walkwayDepth = 5, label }) {
+        if (!building) return null;
+        building.updateWorldMatrix(true, true);
+        const box = new THREE.Box3().setFromObject(building);
+        if (box.isEmpty()) return null;
+
+        const centerX = (box.min.x + box.max.x) / 2 + offsetX;
+        const baseY = (box.min.y + box.max.y) / 2;
+        const frontZ = box.max.z + forwardOffset;
+
+        const doorWidth = width || Math.max(3, (box.max.x - box.min.x) * 0.35);
+        const doorHeight = height || 4.5;
+        const doorDepth = depth || 1.5;
+        const doorSpawn = spawn || { x: 0, z: -10 };
+        const exteriorSpawn = returnSpawn || { x: centerX, z: frontZ + 2 };
+
+        const doorPosition = new THREE.Vector3(centerX, baseY + doorHeight * 0.5 - 0.5, frontZ);
+        return this.createDoorTrigger({
+            position: doorPosition,
+            width: doorWidth,
+            height: doorHeight,
+            depth: doorDepth,
+            targetMap,
+            spawn: doorSpawn,
+            returnMap,
+            returnSpawn: exteriorSpawn,
+            walkwayDepth,
+            label
+        });
+    }
+
+    isCollidingWithMap() {
+        if (!this.colliders.length) return false;
+        const pos = this.player.position;
+        const insideDoorArea = this.doorAreas.some(area => pos.x > area.minX && pos.x < area.maxX && pos.z > area.minZ && pos.z < area.maxZ);
+        for (const box of this.colliders) {
+            if (pos.x > box.min.x && pos.x < box.max.x && pos.z > box.min.z && pos.z < box.max.z) {
+                if (insideDoorArea) {
+                    return false;
+                }
+                return true;
+            }
+        }
+        return false;
     }
 
     async createVillageMap() {
@@ -266,7 +361,18 @@ export class RPGGame {
         for (let i = 0; i < vertices.length; i += 3) {
             const x = vertices[i];
             const z = vertices[i + 1];
-            vertices[i + 2] = villageHeightFn(x, z);
+            const original = villageHeightFn(x, z);
+            const distance = Math.hypot(x, z);
+            const innerRadius = 22;
+            const outerRadius = 45;
+            if (distance <= innerRadius) {
+                vertices[i + 2] = 0.05;
+            } else if (distance <= outerRadius) {
+                const t = (distance - innerRadius) / (outerRadius - innerRadius);
+                vertices[i + 2] = THREE.MathUtils.lerp(0.05, original, t);
+            } else {
+                vertices[i + 2] = original;
+            }
         }
         groundGeometry.attributes.position.needsUpdate = true;
         groundGeometry.computeVertexNormals();
@@ -287,8 +393,24 @@ export class RPGGame {
         this.createPath(0, 0, 50, 6, 0xa89968); // Main path horizontal (wider)
 
         // Load buildings with better scale
-        await this.loadBuilding('pokecenter', 'Pokémon_Center.glb', -15, 0.1, -15, 5);
-        await this.loadBuilding('market', 'Nigrolino_market.glb', 15, 0.1, -15, 5);
+        const pokeCenter = await this.loadBuilding('pokecenter', 'Pokémon_Center.glb', -15, 0, -15, 4.5);
+        const market = await this.loadBuilding('market', 'Nigrolino_market.glb', 15, 0, -15, 4);
+        this.createBuildingDoor(pokeCenter, {
+            targetMap: 'pokecenter',
+            spawn: { x: 0, z: -10 },
+            returnMap: 'village',
+            returnSpawn: { x: -15, z: -9 },
+            walkwayDepth: 6,
+            label: 'Entra nel Poké Center'
+        });
+        this.createBuildingDoor(market, {
+            targetMap: 'market',
+            spawn: { x: 0, z: -10 },
+            returnMap: 'village',
+            returnSpawn: { x: 15, z: -9 },
+            walkwayDepth: 6,
+            label: 'Entra nel Market'
+        });
         
         // Create houses
         this.createHouse(-15, 0, 15, 0xff6b6b);
@@ -304,6 +426,298 @@ export class RPGGame {
         this.createFences();
 
         console.log('✓ Villaggio creato');
+    }
+
+    async createPokeCenterInterior(options = {}) {
+        this.clearCurrentMap();
+        this.setGroundHeightFunction(() => 0);
+
+        const roomWidth = 42;
+        const roomDepth = 54;
+        const wallHeight = 12;
+        const wallThickness = 0.8;
+        const doorOpening = 8;
+        const halfWidth = roomWidth / 2;
+        const halfDepth = roomDepth / 2;
+
+        this.mapBounds = {
+            minX: -halfWidth + 1.5,
+            maxX: halfWidth - 1.5,
+            minZ: -halfDepth + 1.5,
+            maxZ: halfDepth - 1.5
+        };
+
+        const floor = new THREE.Mesh(
+            new THREE.PlaneGeometry(roomWidth, roomDepth),
+            new THREE.MeshStandardMaterial({ color: 0xfdf6f6, roughness: 0.82, metalness: 0.08 })
+        );
+        floor.rotation.x = -Math.PI / 2;
+        floor.receiveShadow = true;
+        this.addToCurrentMap(floor);
+
+        const accentMat = new THREE.MeshStandardMaterial({ color: 0xff8a8a, roughness: 0.55 });
+        const centralCarpet = new THREE.Mesh(new THREE.CircleGeometry(9, 32), accentMat);
+        centralCarpet.rotation.x = -Math.PI / 2;
+        centralCarpet.position.set(0, 0.05, -2);
+        centralCarpet.receiveShadow = true;
+        this.addToCurrentMap(centralCarpet);
+
+        const wallMaterial = new THREE.MeshStandardMaterial({ color: 0xe3efff, roughness: 0.7 });
+        const createWallSegment = (width, x, z) => {
+            const wall = new THREE.Mesh(new THREE.BoxGeometry(width, wallHeight, wallThickness), wallMaterial);
+            wall.position.set(x, wallHeight / 2, z);
+            wall.castShadow = true;
+            wall.receiveShadow = true;
+            this.addToCurrentMap(wall);
+            this.registerCollider(wall, 0.4);
+        };
+
+        createWallSegment(roomWidth, 0, halfDepth - wallThickness / 2);
+        const sideWallGeometry = new THREE.BoxGeometry(roomDepth, wallHeight, wallThickness);
+        const leftWall = new THREE.Mesh(sideWallGeometry, wallMaterial);
+        leftWall.rotation.y = Math.PI / 2;
+        leftWall.position.set(-halfWidth + wallThickness / 2, wallHeight / 2, 0);
+        leftWall.castShadow = true;
+        leftWall.receiveShadow = true;
+        this.addToCurrentMap(leftWall);
+        this.registerCollider(leftWall, 0.4);
+
+        const rightWall = leftWall.clone();
+        rightWall.position.x = halfWidth - wallThickness / 2;
+        this.addToCurrentMap(rightWall);
+        this.registerCollider(rightWall, 0.4);
+
+        const segmentWidth = (roomWidth - doorOpening) / 2;
+        createWallSegment(segmentWidth, -doorOpening / 2 - segmentWidth / 2, -halfDepth + wallThickness / 2);
+        createWallSegment(segmentWidth, doorOpening / 2 + segmentWidth / 2, -halfDepth + wallThickness / 2);
+
+        const counter = new THREE.Mesh(
+            new THREE.BoxGeometry(roomWidth - 6, 4, 4.5),
+            new THREE.MeshStandardMaterial({ color: 0xffb3c8, roughness: 0.6 })
+        );
+        counter.position.set(0, 2, halfDepth - 6);
+        counter.castShadow = true;
+        counter.receiveShadow = true;
+        this.addToCurrentMap(counter);
+        this.registerCollider(counter, 0.3);
+
+        const createHealingPod = (xOffset) => {
+            const podGroup = new THREE.Group();
+
+            const base = new THREE.Mesh(
+                new THREE.CylinderGeometry(2.3, 2.6, 1.2, 24),
+                new THREE.MeshStandardMaterial({ color: 0xdfe6ff, roughness: 0.7 })
+            );
+            base.position.y = 0.6;
+            base.castShadow = true;
+            base.receiveShadow = true;
+            podGroup.add(base);
+
+            const glass = new THREE.Mesh(
+                new THREE.CylinderGeometry(1.7, 1.7, 5.5, 20, 1, true),
+                new THREE.MeshStandardMaterial({ color: 0x9ad7ff, transparent: true, opacity: 0.45, roughness: 0 })
+            );
+            glass.position.y = 3.4;
+            podGroup.add(glass);
+
+            const cap = new THREE.Mesh(
+                new THREE.CylinderGeometry(2.2, 2.3, 1, 24),
+                new THREE.MeshStandardMaterial({ color: 0xff8aa6, roughness: 0.5 })
+            );
+            cap.position.y = 6.4;
+            cap.castShadow = true;
+            cap.receiveShadow = true;
+            podGroup.add(cap);
+
+            podGroup.position.set(xOffset, 0, halfDepth - 12);
+            this.addToCurrentMap(podGroup);
+            this.registerCollider(podGroup, 0.3);
+        };
+
+        createHealingPod(-8);
+        createHealingPod(0);
+        createHealingPod(8);
+
+        const benchMaterial = new THREE.MeshStandardMaterial({ color: 0xcfcfcf, roughness: 0.6 });
+        const createBench = (x, z) => {
+            const bench = new THREE.Mesh(new THREE.BoxGeometry(8, 1.2, 2.4), benchMaterial);
+            bench.position.set(x, 0.6, z);
+            bench.castShadow = true;
+            bench.receiveShadow = true;
+            this.addToCurrentMap(bench);
+            this.registerCollider(bench, 0.2);
+        };
+
+        createBench(-11, 6);
+        createBench(11, 6);
+
+        const receptionLight = new THREE.PointLight(0xfff2f2, 0.65, 70);
+        receptionLight.position.set(0, wallHeight - 1.5, 4);
+        receptionLight.castShadow = true;
+        this.addToCurrentMap(receptionLight);
+
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.78);
+        this.addToCurrentMap(ambientLight);
+
+        const targetMap = options.returnMap || this.currentReturnContext?.map || 'village';
+        const targetSpawn = options.returnSpawn || this.currentReturnContext?.spawn || this.getDefaultSpawn(targetMap);
+        const interiorSpawn = options.spawn || this.getDefaultSpawn('pokecenter');
+
+        this.createDoorTrigger({
+            position: new THREE.Vector3(0, 3, -halfDepth + 0.6),
+            width: 5.5,
+            height: 6,
+            depth: 1.6,
+            targetMap,
+            spawn: targetSpawn,
+            returnMap: 'pokecenter',
+            returnSpawn: interiorSpawn,
+            walkwayDepth: 7,
+            label: 'Esci all\'esterno'
+        });
+
+        console.log('✓ Interno Poké Center creato');
+    }
+
+    async createMarketInterior(options = {}) {
+        this.clearCurrentMap();
+        this.setGroundHeightFunction(() => 0);
+
+        const roomWidth = 38;
+        const roomDepth = 52;
+        const wallHeight = 11;
+        const wallThickness = 0.8;
+        const doorOpening = 7;
+        const halfWidth = roomWidth / 2;
+        const halfDepth = roomDepth / 2;
+
+        this.mapBounds = {
+            minX: -halfWidth + 1.5,
+            maxX: halfWidth - 1.5,
+            minZ: -halfDepth + 1.5,
+            maxZ: halfDepth - 1.5
+        };
+
+        const floor = new THREE.Mesh(
+            new THREE.PlaneGeometry(roomWidth, roomDepth),
+            new THREE.MeshStandardMaterial({ color: 0xf3f0d8, roughness: 0.78, metalness: 0.05 })
+        );
+        floor.rotation.x = -Math.PI / 2;
+        floor.receiveShadow = true;
+        this.addToCurrentMap(floor);
+
+        const aisleRunner = new THREE.Mesh(
+            new THREE.PlaneGeometry(roomWidth - 6, 12),
+            new THREE.MeshStandardMaterial({ color: 0xd3c176, roughness: 0.6 })
+        );
+        aisleRunner.rotation.x = -Math.PI / 2;
+        aisleRunner.position.set(0, 0.04, 5);
+        aisleRunner.receiveShadow = true;
+        this.addToCurrentMap(aisleRunner);
+
+        const wallMaterial = new THREE.MeshStandardMaterial({ color: 0xf7f4e6, roughness: 0.72 });
+        const createWallSegmentMarket = (width, x, z) => {
+            const wall = new THREE.Mesh(new THREE.BoxGeometry(width, wallHeight, wallThickness), wallMaterial);
+            wall.position.set(x, wallHeight / 2, z);
+            wall.castShadow = true;
+            wall.receiveShadow = true;
+            this.addToCurrentMap(wall);
+            this.registerCollider(wall, 0.35);
+        };
+
+        createWallSegmentMarket(roomWidth, 0, halfDepth - wallThickness / 2);
+        const sideWallGeometry = new THREE.BoxGeometry(roomDepth, wallHeight, wallThickness);
+        const leftWall = new THREE.Mesh(sideWallGeometry, wallMaterial);
+        leftWall.rotation.y = Math.PI / 2;
+        leftWall.position.set(-halfWidth + wallThickness / 2, wallHeight / 2, 0);
+        leftWall.castShadow = true;
+        leftWall.receiveShadow = true;
+        this.addToCurrentMap(leftWall);
+        this.registerCollider(leftWall, 0.35);
+
+        const rightWall = leftWall.clone();
+        rightWall.position.x = halfWidth - wallThickness / 2;
+        this.addToCurrentMap(rightWall);
+        this.registerCollider(rightWall, 0.35);
+
+        const segmentWidthMarket = (roomWidth - doorOpening) / 2;
+        createWallSegmentMarket(segmentWidthMarket, -doorOpening / 2 - segmentWidthMarket / 2, -halfDepth + wallThickness / 2);
+        createWallSegmentMarket(segmentWidthMarket, doorOpening / 2 + segmentWidthMarket / 2, -halfDepth + wallThickness / 2);
+
+        const counter = new THREE.Mesh(
+            new THREE.BoxGeometry(roomWidth - 10, 3.5, 4.2),
+            new THREE.MeshStandardMaterial({ color: 0xd97b1d, roughness: 0.55 })
+        );
+        counter.position.set(0, 1.75, -halfDepth + 8);
+        counter.castShadow = true;
+        counter.receiveShadow = true;
+        this.addToCurrentMap(counter);
+        this.registerCollider(counter, 0.25);
+
+        const shelfMaterial = new THREE.MeshStandardMaterial({ color: 0xc8c2a4, roughness: 0.65 });
+        const shelfLevels = 3;
+        const createShelfRow = (x, z) => {
+            const shelfGroup = new THREE.Group();
+            for (let level = 0; level < shelfLevels; level++) {
+                const shelf = new THREE.Mesh(new THREE.BoxGeometry(10, 0.6, 2.4), shelfMaterial);
+                shelf.position.set(0, 0.8 + level * 1.2, 0);
+                shelf.castShadow = true;
+                shelf.receiveShadow = true;
+                shelfGroup.add(shelf);
+            }
+
+            const supports = new THREE.Mesh(
+                new THREE.BoxGeometry(10.2, shelfLevels * 1.2 + 1.2, 0.5),
+                new THREE.MeshStandardMaterial({ color: 0x8f8661, roughness: 0.6 })
+            );
+            supports.position.y = (shelfLevels * 1.2) / 2 + 0.8;
+            shelfGroup.add(supports);
+
+            shelfGroup.position.set(x, 0, z);
+            this.addToCurrentMap(shelfGroup);
+            this.registerCollider(shelfGroup, 0.3);
+        };
+
+        createShelfRow(-9, 4);
+        createShelfRow(0, 4);
+        createShelfRow(9, 4);
+
+        const crateMaterial = new THREE.MeshStandardMaterial({ color: 0xb77a2a, roughness: 0.7 });
+        for (let i = 0; i < 4; i++) {
+            const crate = new THREE.Mesh(new THREE.BoxGeometry(3, 2.5, 3), crateMaterial);
+            crate.position.set(-halfWidth + 4 + i * 3.5, 1.25, halfDepth - 8 - (i % 2) * 2);
+            crate.castShadow = true;
+            crate.receiveShadow = true;
+            this.addToCurrentMap(crate);
+            this.registerCollider(crate, 0.15);
+        }
+
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.75);
+        this.addToCurrentMap(ambientLight);
+
+        const ceilingLight = new THREE.PointLight(0xfff4d5, 0.7, 65);
+        ceilingLight.position.set(0, wallHeight - 1, 6);
+        ceilingLight.castShadow = true;
+        this.addToCurrentMap(ceilingLight);
+
+        const targetMap = options.returnMap || this.currentReturnContext?.map || 'village';
+        const targetSpawn = options.returnSpawn || this.currentReturnContext?.spawn || this.getDefaultSpawn(targetMap);
+        const interiorSpawn = options.spawn || this.getDefaultSpawn('market');
+
+        this.createDoorTrigger({
+            position: new THREE.Vector3(0, 2.8, -halfDepth + 0.6),
+            width: 5,
+            height: 5.5,
+            depth: 1.6,
+            targetMap,
+            spawn: targetSpawn,
+            returnMap: 'market',
+            returnSpawn: interiorSpawn,
+            walkwayDepth: 6.5,
+            label: 'Esci all\'esterno'
+        });
+
+        console.log('✓ Interno Market creato');
     }
 
     async createWildMap() {
@@ -470,7 +884,7 @@ export class RPGGame {
             const gltf = await this.loadGLTF(`modelli_3D/${filename}`);
             const building = gltf.scene;
             building.scale.set(scale, scale, scale);
-            building.position.set(x, y, z);
+            building.position.set(x, 0, z);
             
             building.traverse((child) => {
                 if (child.isMesh) {
@@ -482,10 +896,19 @@ export class RPGGame {
             building.userData.type = 'building';
             building.userData.id = id;
             building.userData.interactable = true;
+            const boundingBox = new THREE.Box3().setFromObject(building);
+            let baseHeight = -boundingBox.min.y;
+            if (!Number.isFinite(baseHeight) || baseHeight < 0.05) {
+                baseHeight = 0.5;
+            }
+            building.userData.baseHeight = baseHeight;
+            this.placeEntityOnGround(building, x, z, y);
             
             this.addToCurrentMap(building);
+            this.registerCollider(building, 0.6);
             this.buildings[id] = building;
             console.log(`✓ ${id} caricato`);
+            return building;
         } catch (error) {
             console.error(`Errore caricamento ${filename}:`, error);
         }
@@ -544,12 +967,20 @@ export class RPGGame {
         window2.position.set(3, 1, 6.1);
         houseGroup.add(window2);
 
-        houseGroup.position.set(x, y + 5.1, z);
+        houseGroup.position.set(x, 0, z);
+        const boundingBox = new THREE.Box3().setFromObject(houseGroup);
+        let baseHeight = -boundingBox.min.y;
+        if (!Number.isFinite(baseHeight) || baseHeight < 0.05) {
+            baseHeight = 0.5;
+        }
+        houseGroup.userData.baseHeight = baseHeight;
+        this.placeEntityOnGround(houseGroup, x, z, y);
         houseGroup.userData.type = 'building';
         houseGroup.userData.id = 'house';
         houseGroup.userData.interactable = true;
         
         this.addToCurrentMap(houseGroup);
+        this.registerCollider(houseGroup, 0.4);
     }
 
     createPath(x, z, width, length, color) {
@@ -670,7 +1101,7 @@ export class RPGGame {
             treeGroup.add(trunk);
 
             // Multi-layer foliage for more realistic tree
-            const foliageColor = maxRadius > 100 ? 0x2d5016 : 0x3a7f2d;
+            const foliageColor = maxRadius > 100 ? 0x3b6b2a : 0x3a7f2d;
             
             // Bottom layer
             const foliage1 = new THREE.Mesh(
@@ -709,6 +1140,9 @@ export class RPGGame {
             treeGroup.add(foliage3);
             
             const groundHeight = this.getGroundHeight ? this.getGroundHeight(x, z) : 0;
+            const randomScale = THREE.MathUtils.randFloat(0.85, 1.35);
+            treeGroup.scale.set(randomScale, randomScale, randomScale);
+            treeGroup.rotation.y = Math.random() * Math.PI * 2;
             treeGroup.position.set(x, groundHeight + 0.1, z);
             this.addToCurrentMap(treeGroup);
         }
@@ -863,8 +1297,8 @@ export class RPGGame {
         const outerGround = new THREE.Mesh(
             new THREE.CircleGeometry(floorRadius, 64),
             new THREE.MeshStandardMaterial({
-                color: 0x2d4f23,
-                roughness: 1,
+                color: 0x3b6d2e,
+                roughness: 0.95,
                 side: THREE.DoubleSide
             })
         );
@@ -875,8 +1309,8 @@ export class RPGGame {
         const cliffWall = new THREE.Mesh(
             new THREE.CylinderGeometry(radius * 1.45, radius * 1.6, 70, 48, 1, true),
             new THREE.MeshStandardMaterial({
-                color: 0x354724,
-                roughness: 1,
+                color: 0x6f8c4b,
+                roughness: 0.9,
                 side: THREE.BackSide
             })
         );
@@ -888,8 +1322,8 @@ export class RPGGame {
         const mountainRidge = new THREE.Mesh(
             new THREE.CylinderGeometry(radius * 1.2, radius * 1.45, 40, 48, 1, false),
             new THREE.MeshStandardMaterial({
-                color: 0x506131,
-                roughness: 0.95
+                color: 0x8fa763,
+                roughness: 0.85
             })
         );
         mountainRidge.position.y = 66;
@@ -908,6 +1342,7 @@ export class RPGGame {
 
         const speed = this.keys.shift ? this.playerSpeed * 2 : this.playerSpeed;
         const moveDistance = speed * deltaTime;
+        const previousPosition = this.player.position.clone();
         
         let moved = false;
         const forward = new THREE.Vector3();
@@ -964,6 +1399,10 @@ export class RPGGame {
         this.player.position.x = THREE.MathUtils.clamp(this.player.position.x, this.mapBounds.minX, this.mapBounds.maxX);
         this.player.position.z = THREE.MathUtils.clamp(this.player.position.z, this.mapBounds.minZ, this.mapBounds.maxZ);
 
+        if (moved && this.isCollidingWithMap()) {
+            this.player.position.copy(previousPosition);
+        }
+
         if (moved) {
             const baseHeight = this.player.userData.baseHeight ?? this.playerBaseHeight;
             const groundHeight = this.getGroundHeight ? this.getGroundHeight(this.player.position.x, this.player.position.z) : 0;
@@ -1013,6 +1452,14 @@ export class RPGGame {
                 this.nearestInteractable = npc;
             }
         });
+
+        // Check doors
+        this.doorTriggers.forEach(door => {
+            const distance = this.player.position.distanceTo(door.position);
+            if (distance < interactionDistance) {
+                this.nearestInteractable = door;
+            }
+        });
     }
 
     interact() {
@@ -1024,7 +1471,18 @@ export class RPGGame {
             this.startWildBattle(this.nearestInteractable);
         } else if (this.nearestInteractable.userData.type === 'npc-trainer') {
             this.interactWithNPC(this.nearestInteractable);
+        } else if (this.nearestInteractable.userData.type === 'door') {
+            this.enterDoor(this.nearestInteractable);
         }
+    }
+
+    enterDoor(door) {
+        const targetMap = door.userData.targetMap;
+        if (!targetMap) return;
+        const spawn = door.userData.spawn || { x: 0, z: 0 };
+        const returnMap = door.userData.returnMap || this.currentMap;
+        const returnSpawn = door.userData.returnSpawn || { x: this.player.position.x, z: this.player.position.z };
+        this.switchMap(targetMap, { spawn, returnMap, returnSpawn });
     }
     
     interactWithNPC(npc) {
@@ -1491,22 +1949,45 @@ export class RPGGame {
         monster.userData.label = sprite;
     }
 
-    async switchMap() {
+    async switchMap(destination = null, options = {}) {
         document.getElementById('loading').classList.remove('hidden');
-        
-        if (this.currentMap === 'village') {
-            this.currentMap = 'wild';
-            document.querySelector('#location-info h2').textContent = '🌲 Zona Selvaggia';
-            document.querySelector('#location-info p').textContent = 'Attenzione ai mostri selvatici!';
-            await this.createWildMap();
-        } else {
-            this.currentMap = 'village';
-            document.querySelector('#location-info h2').textContent = '🏘️ Villaggio Iniziale';
-            document.querySelector('#location-info p').textContent = 'Benvenuto nel mondo dei mostri!';
-            await this.createVillageMap();
+
+        let targetMap = destination;
+        if (!targetMap) {
+            targetMap = this.currentMap === 'village' ? 'wild' : 'village';
         }
-        
-        this.placeEntityOnGround(this.player, 0, 0);
+
+        const defaultSpawn = this.getDefaultSpawn(targetMap);
+        const spawn = {
+            x: options.spawn && typeof options.spawn.x === 'number' ? options.spawn.x : defaultSpawn.x,
+            z: options.spawn && typeof options.spawn.z === 'number' ? options.spawn.z : defaultSpawn.z
+        };
+
+        if (options.returnMap) {
+            this.currentReturnContext = {
+                map: options.returnMap,
+                spawn: options.returnSpawn || defaultSpawn
+            };
+        } else if (targetMap === 'village' || targetMap === 'wild') {
+            this.currentReturnContext = null;
+        }
+
+        if (targetMap === 'wild') {
+            await this.createWildMap();
+        } else if (targetMap === 'village') {
+            await this.createVillageMap();
+        } else if (targetMap === 'pokecenter') {
+            await this.createPokeCenterInterior(options);
+        } else if (targetMap === 'market') {
+            await this.createMarketInterior(options);
+        } else {
+            console.warn('Unknown map requested:', targetMap);
+        }
+
+        this.currentMap = targetMap;
+        this.updateLocationUI(targetMap);
+
+        this.placeEntityOnGround(this.player, spawn.x, spawn.z, options.spawnOffsetY || 0);
         this.controls.target.copy(this.player.position);
         document.getElementById('loading').classList.add('hidden');
     }
@@ -1574,6 +2055,40 @@ export class RPGGame {
 
     hideLoading() {
         document.getElementById('loading').classList.add('hidden');
+    }
+
+    getDefaultSpawn(mapName) {
+        switch (mapName) {
+            case 'wild':
+                return { x: 0, z: -30 };
+            case 'pokecenter':
+                return { x: 0, z: -12 };
+            case 'market':
+                return { x: 0, z: -12 };
+            case 'village':
+            default:
+                return { x: 0, z: 0 };
+        }
+    }
+
+    updateLocationUI(mapName) {
+        const titleEl = document.querySelector('#location-info h2');
+        const textEl = document.querySelector('#location-info p');
+        if (!titleEl || !textEl) return;
+
+        if (mapName === 'wild') {
+            titleEl.textContent = '🌲 Zona Selvaggia';
+            textEl.textContent = 'Attenzione ai mostri selvatici!';
+        } else if (mapName === 'pokecenter') {
+            titleEl.textContent = '🏥 Poké Center';
+            textEl.textContent = 'Cura i tuoi Swissmon e riposati!';
+        } else if (mapName === 'market') {
+            titleEl.textContent = '🛒 Nigrolino Market';
+            textEl.textContent = 'Compra oggetti utili per la tua avventura!';
+        } else {
+            titleEl.textContent = '🏘️ Villaggio Iniziale';
+            textEl.textContent = 'Benvenuto nel mondo dei mostri!';
+        }
     }
     
     saveGame() {
