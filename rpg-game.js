@@ -26,7 +26,6 @@ class RPGGame {
         this.battleTurn = 'player';
         this.npcs = {};
         this.bestiary = new Set(); // Track discovered monsters
-        this.gameStarted = false; // Track if game has been started
         
         // Player movement
         this.keys = {
@@ -40,51 +39,11 @@ class RPGGame {
         this.loader = new GLTFLoader();
         this.uiManager = null;
         
-        // Landing page animation duration (matches CSS transition)
-        this.LANDING_FADE_DURATION = 800;
-        
-        this.showLandingPage();
-    }
-
-    showLandingPage() {
-        // Check if there's a saved game
-        const hasSavedGame = localStorage.getItem('swissmon_save') !== null;
-        
-        const continueBtn = document.getElementById('continue-btn');
-        const newGameBtn = document.getElementById('new-game-btn');
-        
-        // Show continue button only if there's a saved game
-        if (hasSavedGame) {
-            continueBtn.style.display = 'block';
-        }
-        
-        // Set up button handlers (use named functions to avoid duplicates)
-        const startWithSave = () => this.startGame(true);
-        const startNewGame = () => this.startGame(false);
-        
-        continueBtn.addEventListener('click', startWithSave, { once: true });
-        newGameBtn.addEventListener('click', startNewGame, { once: true });
-    }
-
-    async startGame(loadSave) {
-        if (this.gameStarted) return;
-        this.gameStarted = true;
-        
-        // Fade out landing page
-        const landingPage = document.getElementById('landing-page');
-        landingPage.classList.add('fade-out');
-        
-        // Wait for fade out animation
-        setTimeout(() => {
-            landingPage.style.display = 'none';
-            document.getElementById('loading').classList.remove('hidden');
-            
-            // Initialize game (handle async errors)
-            this.init(loadSave).catch(error => {
-                console.error('Failed to initialize game:', error);
-                document.getElementById('loading').innerHTML = '<p>Errore nel caricamento del gioco. Ricarica la pagina.</p>';
-            });
-        }, this.LANDING_FADE_DURATION);
+        // Auto-start game
+        this.init(false).catch(error => {
+            console.error('Failed to initialize game:', error);
+            document.getElementById('loading').innerHTML = '<p>Errore nel caricamento del gioco. Ricarica la pagina.</p>';
+        });
     }
 
     async init(loadSave = false) {
