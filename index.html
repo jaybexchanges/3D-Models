@@ -36,32 +36,6 @@
             z-index: 1;
         }
 
-        /* --- EFFETTO ACQUA (LAGO) --- */
-        /* Creiamo un livello sopra il lago che usa la stessa immagine ma distorta */
-        .water-layer {
-            position: absolute;
-            /* Posizionato sulla zona del lago nell'immagine - centrato e più stretto */
-            top: 45%;
-            left: 25%;
-            width: 50%;
-            height: 25%;
-            
-            /* Cloniamo lo sfondo */
-            background-image: url('modelli_3D/background.jpeg');
-            background-size: contain;
-            background-position: center 45%;
-            background-repeat: no-repeat;
-            
-            /* Applichiamo il filtro SVG */
-            filter: url('#turbulence-filter');
-            opacity: 0.4;
-            z-index: 2;
-            
-            /* Maschera sfumata per bordi naturali */
-            mask-image: linear-gradient(to bottom, transparent, black 20%, black 80%, transparent);
-            -webkit-mask-image: linear-gradient(to bottom, transparent, black 20%, black 80%, transparent);
-        }
-
         /* --- EFFETTO NUVOLE --- */
         .clouds {
             position: absolute;
@@ -126,7 +100,6 @@
             justify-content: flex-start;
             align-items: center;
             padding-top: 50px;
-            background: radial-gradient(circle at center, transparent 40%, rgba(0,0,0,0.3) 100%);
         }
 
         h1 {
@@ -252,26 +225,9 @@
 </head>
 <body>
 
-    <!-- Filtro SVG invisibile per l'acqua -->
-    <svg style="display: none;">
-        <filter id="turbulence-filter">
-            <feTurbulence type="fractalNoise" baseFrequency="0.01 0.08" numOctaves="3" result="warp">
-                <animate attributeName="baseFrequency" 
-                         dur="12s" 
-                         values="0.01 0.08; 0.01 0.12; 0.01 0.08" 
-                         repeatCount="indefinite"/>
-            </feTurbulence>
-            <feDisplacementMap xChannelSelector="R" yChannelSelector="G" scale="25" 
-                               in="SourceGraphic" in2="warp" />
-        </filter>
-    </svg>
-
     <div class="scene">
         <!-- Sfondo statico -->
         <div class="bg-image"></div>
-
-        <!-- Livello Acqua Animata -->
-        <div class="water-layer"></div>
 
         <!-- Nuvole che scorrono -->
         <div class="clouds"></div>
@@ -321,22 +277,6 @@
 
         // Crea una particella ogni 400ms
         setInterval(createLeaf, 400);
-
-        // Animazione JS aggiuntiva per l'acqua (opzionale, migliora l'effetto SVG)
-        const turb = document.querySelector('filter#turbulence-filter feTurbulence');
-        if (turb) {
-            let frames = 0;
-            
-            function animateWater() {
-                frames += 0.03;
-                const valX = 0.01 + Math.sin(frames * 0.15) * 0.003;
-                const valY = 0.08 + Math.cos(frames * 0.25) * 0.015;
-                turb.setAttribute('baseFrequency', `${valX} ${valY}`);
-                requestAnimationFrame(animateWater);
-            }
-            
-            animateWater();
-        }
 
         // Preload della pagina rpg.html per transizione più fluida
         const link = document.createElement('link');
