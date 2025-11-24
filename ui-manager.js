@@ -1,5 +1,5 @@
 // UI Manager for all game menus and interfaces
-import { ITEMS } from './game-data.js';
+import { ITEMS, MOVES } from './game-data.js';
 
 export class UIManager {
     constructor(game) {
@@ -127,7 +127,15 @@ export class UIManager {
                         <button onclick="uiManager.battleAction('item')" class="battle-btn">🎒 Oggetto</button>
                         <button onclick="uiManager.battleAction('run')" class="battle-btn">🏃 Fuggi</button>
                     </div>
+                    <div class="battle-moves hidden" id="battle-moves"></div>
                     <div class="battle-items hidden" id="battle-items"></div>
+                    <div class="move-replace-prompt hidden" id="move-replace-prompt">
+                        <div class="move-replace-container">
+                            <h3 id="move-learn-title"></h3>
+                            <p id="move-learn-text"></p>
+                            <div id="move-replace-options"></div>
+                        </div>
+                    </div>
                 </div>
             </div>
         `;
@@ -213,6 +221,8 @@ export class UIManager {
             <div class="team-card">
                 <h3>${monster.name}</h3>
                 <p class="monster-level">Livello ${monster.level}</p>
+                <p class="monster-types">🏷️ ${monster.types.join(' / ')}</p>
+                <p class="monster-nature">⭐ Natura: ${monster.nature.name}</p>
                 <div class="stat-row">
                     <span>HP:</span>
                     <div class="stat-bar-bg">
@@ -224,6 +234,15 @@ export class UIManager {
                     <span>ATT: ${monster.attack}</span>
                     <span>DEF: ${monster.defense}</span>
                     <span>VEL: ${monster.speed}</span>
+                </div>
+                <div class="moves-display">
+                    <p class="moves-label">Mosse:</p>
+                    <div class="moves-list">
+                        ${monster.moves.map(moveKey => {
+                            const move = MOVES[moveKey];
+                            return move ? `<span class="move-chip" title="${move.description}">${move.name}</span>` : '';
+                        }).join('')}
+                    </div>
                 </div>
                 <div class="exp-display">
                     <span>EXP: ${monster.exp}/${monster.expToNextLevel}</span>
@@ -393,7 +412,47 @@ export class UIManager {
     
     // Battle UI Functions
     battleAction(action) {
-        this.game.handleBattleAction(action);
+        if (action === 'attack') {
+            this.showMoveSelection();
+        } else {
+            this.game.handleBattleAction(action);
+        }
+    }
+    
+    showMoveSelection() {
+        const movesDiv = document.getElementById('battle-moves');
+        const playerMonster = this.game.playerTeam[0];
+        
+        if (!playerMonster || !playerMonster.moves) {
+            this.game.handleBattleAction('attack', 0);
+            return;
+        }
+        
+        movesDiv.innerHTML = playerMonster.moves.map((moveKey, index) => {
+            const move = MOVES[moveKey];
+            if (!move) return '';
+            
+            return `
+                <button onclick="uiManager.useBattleMove(${index})" class="battle-move-btn">
+                    <span class="move-name">${move.name}</span>
+                    <span class="move-type">${move.type}</span>
+                    <span class="move-power">⚡ ${move.power}</span>
+                </button>
+            `;
+        }).join('');
+        
+        movesDiv.classList.remove('hidden');
+        document.getElementById('battle-actions').classList.add('hidden');
+    }
+    
+    hideMoveSelection() {
+        document.getElementById('battle-moves').classList.add('hidden');
+        document.getElementById('battle-actions').classList.remove('hidden');
+    }
+    
+    useBattleMove(moveIndex) {
+        this.hideMoveSelection();
+        this.game.handleBattleAction('attack', moveIndex);
     }
     
     updateBattleUI(playerMonster, enemyMonster) {
@@ -456,6 +515,94 @@ export class UIManager {
     useBattleItem(itemId) {
         this.game.useCatchItem(itemId);
         this.hideBattleItemSelection();
+    }
+    
+    showMoveReplacePrompt(monster, newMoveKey) {
+        const newMove = MOVES[newMoveKey];
+        const promptDiv = document.getElementById('move-replace-prompt');
+        const titleEl = document.getElementById('move-learn-title');
+        const textEl = document.getElementById('move-learn-text');
+        const optionsDiv = document.getElementById('move-replace-options');
+        
+        titleEl.textContent = `${monster.name} vuole imparare ${newMove.name}!`;
+        textEl.textContent = `Ma ${monster.name} conosce già 4 mosse. Vuoi sostituire una mossa?`;
+        
+        // Build options
+        let optionsHTML = '<div class="move-replace-grid">';
+        
+        // Show current moves
+        monster.moves.forEach((moveKey, index) => {
+            const move = MOVES[moveKey];
+            optionsHTML += `
+                <button onclick="uiManager.replaceMove(${index})" class="move-replace-btn">
+                    <span class="move-name">${move.name}</span>
+                    <span class="move-type">${move.type}</span>
+                    <span class="move-power">⚡ ${move.power}</span>
+                </button>
+            `;
+        });
+        
+        optionsHTML += '</div>';
+        
+        // Show new move info
+        optionsHTML += `
+            <div class="new-move-info">
+                <h4>Nuova mossa:</h4>
+                <div class="move-details">
+                    <span class="move-name">${newMove.name}</span>
+                    <span class="move-type">${newMove.type}</span>
+                    <span class="move-power">⚡ ${newMove.power}</span>
+                    <p>${newMove.description}</p>
+                </div>
+            </div>
+        `;
+        
+        // Add cancel button
+        optionsHTML += '<button onclick="uiManager.cancelMoveLearn()" class="menu-btn">Non imparare</button>';
+        
+        optionsDiv.innerHTML = optionsHTML;
+        
+        // Hide battle actions, show prompt
+        document.getElementById('battle-actions').classList.add('hidden');
+        document.getElementById('battle-moves').classList.add('hidden');
+        promptDiv.classList.remove('hidden');
+    }
+    
+    replaceMove(index) {
+        const pendingLearn = this.game.pendingMoveLearn;
+        if (pendingLearn) {
+            const newMove = MOVES[pendingLearn.moveKey];
+            const oldMove = MOVES[pendingLearn.monster.moves[index]];
+            
+            pendingLearn.monster.learnMove(pendingLearn.moveKey, index);
+            
+            this.addBattleLog(`${pendingLearn.monster.name} ha dimenticato ${oldMove.name} e ha imparato ${newMove.name}!`);
+            
+            this.hideMoveReplacePrompt();
+            this.game.pendingMoveLearn = null;
+            
+            // Continue battle flow
+            this.game.continueBattleAfterMoveLearn();
+        }
+    }
+    
+    cancelMoveLearn() {
+        const pendingLearn = this.game.pendingMoveLearn;
+        if (pendingLearn) {
+            const newMove = MOVES[pendingLearn.moveKey];
+            this.addBattleLog(`${pendingLearn.monster.name} non ha imparato ${newMove.name}.`);
+            
+            this.hideMoveReplacePrompt();
+            this.game.pendingMoveLearn = null;
+            
+            // Continue battle flow
+            this.game.continueBattleAfterMoveLearn();
+        }
+    }
+    
+    hideMoveReplacePrompt() {
+        document.getElementById('move-replace-prompt').classList.add('hidden');
+        document.getElementById('battle-actions').classList.remove('hidden');
     }
     
     // Utility Functions

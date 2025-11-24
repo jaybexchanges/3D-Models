@@ -1,8 +1,11 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { Monster, PlayerInventory, MONSTER_SPECIES, ITEMS, NPCS } from './game-data.js';
+import { Monster, PlayerInventory, MONSTER_SPECIES, ITEMS, NPCS, MOVES } from './game-data.js';
 import { UIManager } from './ui-manager.js';
+
+// Make MOVES globally accessible for UI
+window.MOVES = MOVES;
 
 class RPGGame {
     constructor() {
@@ -22,6 +25,7 @@ class RPGGame {
         this.currentBattleEnemyMonster = null;
         this.battleTurn = 'player';
         this.npcs = {};
+        this.bestiary = new Set(); // Track discovered monsters
         
         // Player movement
         this.keys = {
@@ -49,11 +53,21 @@ class RPGGame {
         window.uiManager = this.uiManager; // Make accessible globally for onclick handlers
         window.rpgGame = this; // Make game accessible globally
         
+        // Add GnuGnu as starter monster
+        this.addStarterMonster();
+        
         await this.loadPlayer();
         await this.createVillageMap();
         
         this.animate();
         this.hideLoading();
+    }
+    
+    addStarterMonster() {
+        // Create GnuGnu as starter monster at level 5
+        const starterMonster = new Monster('Gnugnu', 5);
+        this.playerTeam.push(starterMonster);
+        console.log('✓ Starter monster added: Gnugnu');
     }
 
     setupScene() {
@@ -621,12 +635,7 @@ class RPGGame {
 
     startWildBattle(monsterMesh) {
         if (this.playerTeam.length === 0) {
-            alert('Non hai mostri nella squadra! Cattura un mostro usando una Poké Ball!');
-            return;
-        }
-        
-        if (this.playerTeam.length >= 6) {
-            alert('Hai già 6 mostri! Non puoi catturarne altri.');
+            alert('Non hai mostri nella squadra!');
             return;
         }
 
@@ -635,11 +644,13 @@ class RPGGame {
         
         // Create enemy monster instance
         const speciesKey = monsterMesh.userData.name.replace(' ', '_');
-        const level = 3 + Math.floor(Math.random() * 5); // Random level 3-7
+        const level = 2 + Math.floor(Math.random() * 6); // Random level 2-7
         this.currentBattleEnemyMonster = new Monster(speciesKey, level);
         
-        // Hide old battle UI, show new one
-        document.getElementById('battle-screen').classList.remove('active');
+        // Add to bestiary after first encounter
+        this.addToBestiary(speciesKey);
+        
+        // Show battle UI
         document.getElementById('battle-ui').classList.remove('hidden');
         
         this.uiManager.clearBattleLog();
@@ -669,9 +680,9 @@ class RPGGame {
         this.uiManager.updateBattleUI(this.playerTeam[0], this.currentBattleEnemyMonster);
     }
 
-    handleBattleAction(action) {
+    handleBattleAction(action, moveIndex = 0) {
         if (action === 'attack') {
-            this.battleAttack();
+            this.battleAttack(moveIndex);
         } else if (action === 'catch') {
             if (this.currentTrainer) {
                 this.uiManager.addBattleLog('Non puoi catturare i mostri degli allenatori!');
@@ -689,18 +700,45 @@ class RPGGame {
         }
     }
     
-    battleAttack() {
+    battleAttack(moveIndex = 0) {
         const playerMonster = this.playerTeam[0];
         const enemyMonster = this.currentBattleEnemyMonster;
         
-        // Calculate damage (simplified Pokemon formula)
+        // Get the move to use
+        const move = playerMonster.getMove(moveIndex);
+        if (!move) {
+            this.uiManager.addBattleLog('Mossa non disponibile!');
+            return;
+        }
+        
+        // Check accuracy
+        const hitChance = Math.random() * 100;
+        if (hitChance > move.accuracy) {
+            this.uiManager.addBattleLog(`${playerMonster.name} usa ${move.name} ma manca!`);
+            setTimeout(() => this.enemyAttack(), 1500);
+            return;
+        }
+        
+        // Calculate type effectiveness
+        const effectiveness = playerMonster.getTypeEffectiveness(move.type, enemyMonster.types);
+        
+        // Calculate damage using Pokemon formula with move power
         const attackerAttack = playerMonster.attack;
         const defenderDefense = enemyMonster.defense;
-        const baseDamage = Math.floor(((2 * playerMonster.level / 5 + 2) * 50 * attackerAttack / defenderDefense) / 50) + 2;
-        const damage = Math.floor(baseDamage * (0.85 + Math.random() * 0.15));
+        const baseDamage = Math.floor(((2 * playerMonster.level / 5 + 2) * move.power * attackerAttack / defenderDefense) / 50) + 2;
+        const damage = Math.floor(baseDamage * effectiveness * (0.85 + Math.random() * 0.15));
         
         const enemyDied = enemyMonster.takeDamage(damage);
-        this.uiManager.addBattleLog(`${playerMonster.name} attacca! ${damage} HP di danno!`);
+        
+        this.uiManager.addBattleLog(`${playerMonster.name} usa ${move.name}!`);
+        if (effectiveness > 1) {
+            this.uiManager.addBattleLog('È super efficace!');
+        } else if (effectiveness < 1 && effectiveness > 0) {
+            this.uiManager.addBattleLog('Non è molto efficace...');
+        } else if (effectiveness === 0) {
+            this.uiManager.addBattleLog('Non ha effetto...');
+        }
+        this.uiManager.addBattleLog(`${damage} HP di danno!`);
         this.uiManager.updateBattleUI(playerMonster, enemyMonster);
         
         if (enemyDied) {
@@ -716,13 +754,53 @@ class RPGGame {
         const playerMonster = this.playerTeam[0];
         const enemyMonster = this.currentBattleEnemyMonster;
         
+        // Enemy picks a random move
+        const moveIndex = Math.floor(Math.random() * enemyMonster.moves.length);
+        const move = enemyMonster.getMove(moveIndex);
+        
+        if (!move) {
+            // Fallback to basic attack if no move available
+            const damage = Math.floor(enemyMonster.attack * 0.5);
+            const playerDied = playerMonster.takeDamage(damage);
+            this.uiManager.addBattleLog(`${enemyMonster.name} attacca! ${damage} HP di danno!`);
+            this.uiManager.updateBattleUI(playerMonster, enemyMonster);
+            
+            if (playerDied) {
+                setTimeout(() => {
+                    this.uiManager.addBattleLog(`${playerMonster.name} è esausto!`);
+                    setTimeout(() => this.endBattle(false), 2000);
+                }, 1000);
+            }
+            return;
+        }
+        
+        // Check accuracy
+        const hitChance = Math.random() * 100;
+        if (hitChance > move.accuracy) {
+            this.uiManager.addBattleLog(`${enemyMonster.name} usa ${move.name} ma manca!`);
+            return;
+        }
+        
+        // Calculate type effectiveness
+        const effectiveness = enemyMonster.getTypeEffectiveness(move.type, playerMonster.types);
+        
+        // Calculate damage
         const attackerAttack = enemyMonster.attack;
         const defenderDefense = playerMonster.defense;
-        const baseDamage = Math.floor(((2 * enemyMonster.level / 5 + 2) * 50 * attackerAttack / defenderDefense) / 50) + 2;
-        const damage = Math.floor(baseDamage * (0.85 + Math.random() * 0.15));
+        const baseDamage = Math.floor(((2 * enemyMonster.level / 5 + 2) * move.power * attackerAttack / defenderDefense) / 50) + 2;
+        const damage = Math.floor(baseDamage * effectiveness * (0.85 + Math.random() * 0.15));
         
         const playerDied = playerMonster.takeDamage(damage);
-        this.uiManager.addBattleLog(`${enemyMonster.name} attacca! ${damage} HP di danno!`);
+        
+        this.uiManager.addBattleLog(`${enemyMonster.name} usa ${move.name}!`);
+        if (effectiveness > 1) {
+            this.uiManager.addBattleLog('È super efficace!');
+        } else if (effectiveness < 1 && effectiveness > 0) {
+            this.uiManager.addBattleLog('Non è molto efficace...');
+        } else if (effectiveness === 0) {
+            this.uiManager.addBattleLog('Non ha effetto...');
+        }
+        this.uiManager.addBattleLog(`${damage} HP di danno!`);
         this.uiManager.updateBattleUI(playerMonster, enemyMonster);
         
         if (playerDied) {
@@ -740,9 +818,29 @@ class RPGGame {
         this.uiManager.addBattleLog(`${this.currentBattleEnemyMonster.name} è esausto!`);
         this.uiManager.addBattleLog(`${playerMonster.name} ha guadagnato ${expGained} EXP!`);
         
-        const leveledUp = playerMonster.gainExp(expGained);
-        if (leveledUp) {
+        const levelUpResult = playerMonster.gainExp(expGained);
+        if (levelUpResult.leveledUp) {
             this.uiManager.addBattleLog(`${playerMonster.name} è salito al livello ${playerMonster.level}!`);
+            
+            // Check if there's a new move to learn
+            if (levelUpResult.newMove) {
+                const newMove = MOVES[levelUpResult.newMove];
+                if (playerMonster.moves.length < 4) {
+                    // Auto-learn if less than 4 moves
+                    playerMonster.learnMove(levelUpResult.newMove);
+                    this.uiManager.addBattleLog(`${playerMonster.name} ha imparato ${newMove.name}!`);
+                } else {
+                    // Prompt user to replace a move
+                    this.pendingMoveLearn = {
+                        monster: playerMonster,
+                        moveKey: levelUpResult.newMove
+                    };
+                    setTimeout(() => {
+                        this.uiManager.showMoveReplacePrompt(playerMonster, levelUpResult.newMove);
+                    }, 2000);
+                    return; // Don't continue battle flow yet
+                }
+            }
         }
         
         this.uiManager.updateBattleUI(playerMonster, this.currentBattleEnemyMonster);
@@ -777,7 +875,46 @@ class RPGGame {
         }
     }
     
+    continueBattleAfterMoveLearn() {
+        const playerMonster = this.playerTeam[0];
+        this.uiManager.updateBattleUI(playerMonster, this.currentBattleEnemyMonster);
+        
+        if (this.currentTrainer) {
+            // Trainer battle - check for next monster
+            this.trainerTeamIndex++;
+            const trainerData = this.currentTrainer.userData.npcData;
+            
+            if (this.trainerTeamIndex < trainerData.team.length) {
+                setTimeout(() => {
+                    const nextMonster = trainerData.team[this.trainerTeamIndex];
+                    this.currentBattleEnemyMonster = new Monster(nextMonster.species, nextMonster.level);
+                    this.uiManager.addBattleLog(`${trainerData.name} manda in campo ${this.currentBattleEnemyMonster.name}!`);
+                    this.uiManager.updateBattleUI(playerMonster, this.currentBattleEnemyMonster);
+                }, 1000);
+            } else {
+                // Trainer defeated
+                setTimeout(() => {
+                    this.inventory.money += trainerData.reward;
+                    this.uiManager.addBattleLog(`Hai sconfitto ${trainerData.name}!`);
+                    this.uiManager.addBattleLog(`Hai ricevuto ${trainerData.reward} monete!`);
+                    trainerData.defeated = true;
+                    // Remove exclamation mark from NPC
+                    this.currentTrainer.children[2].visible = false;
+                    setTimeout(() => this.endBattle(true), 2000);
+                }, 1000);
+            }
+        } else {
+            // Wild battle - remove monster from scene
+            setTimeout(() => this.endBattle(true), 1000);
+        }
+    }
+    
     useCatchItem(itemId) {
+        if (this.playerTeam.length >= 6) {
+            this.uiManager.addBattleLog('La tua squadra è piena! Non puoi catturare altri mostri.');
+            return;
+        }
+        
         if (!this.inventory.useItem(itemId)) {
             this.uiManager.addBattleLog('Non hai questo oggetto!');
             return;
@@ -787,13 +924,51 @@ class RPGGame {
         const enemyMonster = this.currentBattleEnemyMonster;
         const speciesData = MONSTER_SPECIES[enemyMonster.species];
         
-        // Calculate catch chance
-        const hpFactor = (enemyMonster.maxHP - enemyMonster.currentHP) / enemyMonster.maxHP;
-        const catchChance = speciesData.catchRate * item.catchBonus * (1 + hpFactor * 0.5);
+        // Enhanced capture algorithm
+        // Base catch rate from species (0.0 to 1.0)
+        let catchRate = speciesData.catchRate;
+        
+        // HP Factor: Lower HP increases catch rate significantly
+        // Full HP = 1.0x, Half HP = 1.5x, Low HP (< 25%) = 2.0x
+        const hpPercent = enemyMonster.currentHP / enemyMonster.maxHP;
+        let hpModifier = 1.0;
+        if (hpPercent <= 0.25) {
+            hpModifier = 2.0; // Very low HP: 2x easier
+        } else if (hpPercent <= 0.5) {
+            hpModifier = 1.5; // Half HP: 1.5x easier
+        } else {
+            hpModifier = 1.0 + (1.0 - hpPercent) * 0.5; // Gradual increase as HP drops
+        }
+        
+        // Level Factor: Higher level = slightly harder to catch
+        // Level 5 = 1.0x, Level 10 = 0.95x, Level 20 = 0.85x, Level 50 = 0.65x
+        const levelModifier = Math.max(0.5, 1.0 - (enemyMonster.level - 5) * 0.01);
+        
+        // Status Condition Bonuses
+        let statusBonus = 0;
+        if (enemyMonster.status === 'paralyzed') {
+            statusBonus = 0.15; // +15% for paralyzed
+        } else if (enemyMonster.status === 'asleep') {
+            statusBonus = 0.20; // +20% for asleep
+        } else if (enemyMonster.status === 'frozen') {
+            statusBonus = 0.20; // +20% for frozen
+        } else if (enemyMonster.status === 'poisoned' || enemyMonster.status === 'burned') {
+            statusBonus = 0.10; // +10% for poisoned/burned
+        }
+        
+        // Poké Ball multiplier (pokeball: 1.0x, greatball: 1.5x, ultraball: 2.0x)
+        const ballModifier = item.catchBonus;
+        
+        // Final catch rate calculation
+        // Formula: baseRate * hpMod * levelMod * ballMod + statusBonus
+        const finalCatchRate = Math.min(0.99, (catchRate * hpModifier * levelModifier * ballModifier) + statusBonus);
         
         this.uiManager.addBattleLog(`Hai lanciato una ${item.name}!`);
         
-        if (Math.random() < catchChance) {
+        // Debug info (can be removed in production)
+        console.log(`Catch attempt: Base=${catchRate.toFixed(2)}, HP=${hpModifier.toFixed(2)}, Level=${levelModifier.toFixed(2)}, Ball=${ballModifier}, Status=+${statusBonus.toFixed(2)}, Final=${(finalCatchRate * 100).toFixed(1)}%`);
+        
+        if (Math.random() < finalCatchRate) {
             this.uiManager.addBattleLog(`Fantastico! Hai catturato ${enemyMonster.name}!`);
             
             // Add to team
@@ -827,9 +1002,68 @@ class RPGGame {
         this.trainerTeamIndex = 0;
         
         document.getElementById('battle-ui').classList.add('hidden');
-        document.getElementById('battle-screen').classList.remove('active');
         
         this.uiManager.updateAllDisplays();
+    }
+    
+    addToBestiary(speciesKey) {
+        if (!this.bestiary.has(speciesKey)) {
+            this.bestiary.add(speciesKey);
+            // Update labels on all wild monsters of this species
+            this.updateMonsterLabels();
+        }
+    }
+    
+    updateMonsterLabels() {
+        this.wildMonsters.forEach(monster => {
+            const speciesKey = monster.userData.name.replace(' ', '_');
+            if (this.bestiary.has(speciesKey)) {
+                this.createMonsterLabel(monster);
+            }
+        });
+    }
+    
+    createMonsterLabel(monster) {
+        // Remove old label if it exists
+        if (monster.userData.label) {
+            monster.remove(monster.userData.label);
+        }
+        
+        const speciesKey = monster.userData.name.replace(' ', '_');
+        const speciesData = MONSTER_SPECIES[speciesKey];
+        
+        if (!speciesData) return;
+        
+        // Create a canvas for the label
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+        canvas.width = 256;
+        canvas.height = 64;
+        
+        // Draw background
+        context.fillStyle = 'rgba(0, 0, 0, 0.7)';
+        context.fillRect(0, 0, canvas.width, canvas.height);
+        
+        // Draw text
+        context.font = 'bold 20px Arial';
+        context.fillStyle = '#ffffff';
+        context.textAlign = 'center';
+        context.fillText(speciesData.name, canvas.width / 2, 28);
+        
+        // Draw level (we'll update this dynamically when monster spawns)
+        context.font = '16px Arial';
+        context.fillStyle = '#ffd700';
+        context.fillText('Lv. ???', canvas.width / 2, 50);
+        
+        // Create sprite
+        const texture = new THREE.CanvasTexture(canvas);
+        const spriteMaterial = new THREE.SpriteMaterial({ map: texture });
+        const sprite = new THREE.Sprite(spriteMaterial);
+        sprite.scale.set(4, 1, 1);
+        sprite.position.set(0, 3, 0);
+        
+        monster.add(sprite);
+        monster.userData.label = sprite;
     }
 
     async switchMap() {
@@ -891,6 +1125,7 @@ class RPGGame {
             team: this.playerTeam.map(m => m.toJSON()),
             inventory: this.inventory.toJSON(),
             currentMap: this.currentMap,
+            bestiary: Array.from(this.bestiary),
             npcs: {},
             timestamp: Date.now()
         };
@@ -917,6 +1152,12 @@ class RPGGame {
         
         // Restore inventory
         this.inventory = PlayerInventory.fromJSON(data.inventory);
+        
+        // Restore bestiary
+        if (data.bestiary) {
+            this.bestiary = new Set(data.bestiary);
+            this.updateMonsterLabels();
+        }
         
         // Restore NPC status
         Object.keys(data.npcs).forEach(npcId => {
