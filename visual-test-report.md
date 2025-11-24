@@ -18,7 +18,8 @@ This report documents the comprehensive visual inspection and collision testing 
 
 ## Test Methodology
 
-- **20+ Screenshots** captured from various angles and positions
+- **27+ Screenshots** captured from various angles and positions
+- **Ground-Level Camera Tests** ("a raso terra") - camera at player feet height looking horizontally
 - **Collision Detection** testing at key positions
 - **Object Positioning** verification (floating/underground checks)
 - **Door Entry/Exit** functionality testing
@@ -26,9 +27,9 @@ This report documents the comprehensive visual inspection and collision testing 
 
 ---
 
-## Screenshot Locations (20+ Views)
+## Screenshot Locations (27+ Views)
 
-### Village Map (10 Screenshots)
+### Village Map - Standard Views (10 Screenshots)
 1. **01_village_center** - Initial view from center (0, 0)
 2. **02_pokecenter_area** - Near Poké Center (-15, -10)
 3. **03_market_area** - Near Market (15, -10)
@@ -39,6 +40,24 @@ This report documents the comprehensive visual inspection and collision testing 
 8. **08_north_view** - North side view (0, -25)
 9. **09_south_view** - South side view (0, 30)
 10. **10_overview** - Bird's eye overview
+
+### Ground-Level Views ("a raso terra") (7 Screenshots)
+Camera positioned at terrain + 1.0 height, looking horizontally:
+
+21. **ground_village_center** - Village center, looking toward Poké Center
+    - Camera: (0, terrain+1.0, 5), Target: (0, terrain+1.0, -20)
+22. **ground_market_side** - Ground view of Market entrance
+    - Camera: (10, terrain+0.5, -10), Target: (15, terrain+0.5, -15)
+23. **ground_houses** - Ground view of houses
+    - Camera: (-10, terrain+0.5, 15), Target: (-15, terrain+0.5, 15)
+24. **ground_npc** - Ground view toward trainer
+    - Camera: (-22, terrain+0.5, 3), Target: (-25, terrain+0.5, 0)
+25. **ground_wild_zone** - Wild zone ground level
+    - Camera: (0, terrain+1.0, 20), Target: (0, terrain+1.0, 0)
+26. **ground_pokecenter_interior** - Poké Center interior ground level
+    - Camera: (0, 1.5, 15), Target: (0, 1.5, -10)
+27. **ground_market_interior** - Market interior ground level
+    - Camera: (0, 1.5, 15), Target: (0, 1.5, -10)
 
 ### Wild Zone Map (5 Screenshots)
 11. **11_wild_center** - Center of wild zone (0, 0)
@@ -125,20 +144,34 @@ The collision system prevents players from walking through:
 
 ### ✅ Passed Checks
 
-1. **No Floating Objects** - All buildings and NPCs are properly grounded
-2. **No Underground Objects** - No clipping through terrain detected
-3. **Proper Scaling** - NPCs are proportional to player size
-4. **Door Accessibility** - Entry/exit points have adequate clearance
-5. **Collision Boundaries** - Not too invasive, allows comfortable navigation
-6. **Building Placement** - Symmetrical and aesthetically pleasing layout
-7. **Terrain Variation** - Subtle height variation in village, more dramatic in wild zone
-8. **Interior Dimensions** - Adequate space for navigation and interaction
+1. **Buildings Properly Grounded** - All buildings are properly positioned on terrain
+2. **Proper Scaling** - NPCs are proportional to player size (0.94 ratio)
+3. **Door Accessibility** - Entry/exit points have adequate clearance
+4. **Collision Boundaries** - Not too invasive, allows comfortable navigation
+5. **Building Placement** - Symmetrical and aesthetically pleasing layout
+6. **Terrain Variation** - Subtle height variation in village, more dramatic in wild zone
+7. **Interior Dimensions** - Adequate space for navigation and interaction
+8. **Interior Maps Clean** - No objects below ground level in Poké Center or Market
+
+### ⚠️ Issues Detected (Ground-Level Inspection)
+
+Issues detected during ground-level camera testing ("a raso terra"):
+
+| Map | Object Type | Position (X, Y, Z) | Issue |
+|-----|-------------|-------------------|-------|
+| Village | 3x BoxGeometry | (0, -2.5, 6.15) | Objects below ground level |
+| Wild Zone | 1x CircleGeometry | (0, -4, 0) | Object below ground level |
+
+**Village Map**: 3 unnamed BoxGeometry objects are positioned at Y=-2.5, which is approximately 2.8 units below the terrain surface at that location.
+
+**Wild Zone**: 1 CircleGeometry object at the center of the map is positioned at Y=-4, which is below the visible terrain.
 
 ### Areas for Monitoring
 
 1. **Player Y-Position** - Ensure player doesn't clip below terrain after rapid movement
 2. **Wild Zone Monsters** - Verify spawn positions during gameplay
 3. **Camera Angles** - Maintain visibility in all map areas
+4. **Underground Objects** - The 4 objects detected below ground should be investigated
 
 ---
 
@@ -166,18 +199,23 @@ The collision system prevents players from walking through:
 
 ## Conclusion
 
-The visual rendering and collision systems are functioning correctly. All major visual elements have been verified:
+The visual rendering and collision systems are mostly functioning correctly. Key findings from the comprehensive inspection including ground-level camera tests:
 
-- ✅ Buildings are properly positioned and scaled
-- ✅ NPCs are at correct heights relative to terrain
-- ✅ Collision detection is working
-- ✅ Door entry/exit points are accessible
-- ✅ Map boundaries are correctly enforced
-- ✅ No floating or underground objects detected
-- ✅ Interior spaces are properly dimensioned
+### Passed Checks ✅
+- Buildings are properly positioned and scaled
+- NPCs are at correct heights relative to terrain
+- Collision detection is working
+- Door entry/exit points are accessible
+- Map boundaries are correctly enforced
+- Interior spaces are properly dimensioned
 
-The game maps pass the visual quality assessment with no critical issues detected.
+### Issues Found ⚠️
+- **4 objects detected below ground level** during ground-level camera inspection:
+  - 3 BoxGeometry objects in Village at (0, -2.5, 6.15)
+  - 1 CircleGeometry in Wild Zone at (0, -4, 0)
+
+These objects may not be visible from standard camera angles but are detected when using ground-level inspection. Further investigation is recommended to determine if these objects are intentional (e.g., underground trigger volumes) or placement errors.
 
 ---
 
-*Report generated automatically by visual-rendering test suite*
+*Report generated automatically by visual-rendering test suite with ground-level camera tests*
