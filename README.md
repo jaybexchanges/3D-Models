@@ -5,12 +5,29 @@ Un'avventura RPG 3D completa in stile Pokémon con sistema di cattura, battaglie
 ## 🎨 Modelli 3D Disponibili
 
 ### Mostriciattoli Catturabili
-- **Blue Puffball** 🔵 - Palla pelosa blu (Lv. base: HP 45, ATK 49, DEF 49, VEL 45)
-- **Gnugnu** 👻 - Creatura misteriosa (Lv. base: HP 50, ATK 55, DEF 40, VEL 60)
-- **Lotus** 🌸 - Mostro floreale (Lv. base: HP 55, ATK 45, DEF 55, VEL 50)
-- **Blossom** 🌺 - Creatura fiorita (Lv. base: HP 48, ATK 52, DEF 43, VEL 65)
-- **LavaFlare** 🔥 - Mostro di fuoco (Lv. base: HP 58, ATK 64, DEF 50, VEL 55)
-- **Pyrolynx** 🦁 - Felino infuocato (Lv. base: HP 52, ATK 60, DEF 48, VEL 58)
+- **Blue Puffball** 🔵💧✨ - Palla pelosa blu (Water/Fairy)
+  - Base: HP 45, ATK 49, DEF 49, VEL 45
+  - Mosse speciali: Water Gun, Bubble Beam, Moonblast, Play Rough
+  
+- **Gnugnu** 👻🧠 - Creatura misteriosa (Ghost/Psychic) **[STARTER]**
+  - Base: HP 50, ATK 55, DEF 40, VEL 60
+  - Mosse speciali: Shadow Ball, Psychic, Shadow Claw, Zen Headbutt
+  
+- **Lotus** 🌸🌿✨ - Mostro floreale (Grass/Fairy)
+  - Base: HP 55, ATK 45, DEF 55, VEL 50
+  - Mosse speciali: Solar Beam, Energy Ball, Moonblast, Petal Dance
+  
+- **Blossom** 🌺🌿 - Creatura fiorita (Grass)
+  - Base: HP 48, ATK 52, DEF 43, VEL 65
+  - Mosse speciali: Razor Leaf, Solar Beam, Energy Ball
+  
+- **LavaFlare** 🔥🪨 - Mostro di fuoco (Fire/Rock)
+  - Base: HP 58, ATK 64, DEF 50, VEL 55
+  - Mosse speciali: Flamethrower, Fire Blast, Heat Wave
+  
+- **Pyrolynx** 🦁🔥 - Felino infuocato (Fire/Normal)
+  - Base: HP 52, ATK 60, DEF 48, VEL 58
+  - Mosse speciali: Fire Punch, Flamethrower, Body Slam
 
 ### Personaggi
 - **Player_1** 👤 - Personaggio principale
@@ -55,13 +72,40 @@ npm start
 
 - **Sistema di Battaglia Avanzato**
   - Battaglie a turni con calcolo danni realistico
+  - **Sistema di mosse completo con 55+ mosse**
+  - **Selezione mossa durante la battaglia**
+  - **Sistema di tipi elementali con vantaggi/svantaggi**
   - HP bar animate in tempo reale
   - Log di battaglia con messaggi dettagliati
   - Battaglie contro mostri selvatici e allenatori NPC
+  - Calcolo efficacia tipo (super efficace, non molto efficace)
+
+- **Sistema di Mosse Avanzato** ⚔️
+  - **55+ mosse diverse** con potenza, tipo e precisione
+  - Ogni mostro impara mosse specifiche salendo di livello
+  - Limite di 4 mosse per mostro
+  - Mosse di tipo: Normale, Fuoco, Acqua, Erba, Elettro, Fantasma, Psico, Folletto, Acciaio, Drago
+  - Ogni mossa ha descrizione, potenza e precisione uniche
+
+- **Sistema di Tipi Elementali** 🔥💧🌿
+  - **18 tipi elementali**: Normal, Fire, Water, Grass, Electric, Ice, Fighting, Poison, Ground, Flying, Psychic, Bug, Rock, Ghost, Dragon, Dark, Steel, Fairy
+  - **Dual-typing**: La maggior parte dei mostri ha 2 tipi
+  - **Calcolo efficacia tipo**: Vantaggi e svantaggi in battaglia
+  - Esempi: Fuoco > Erba, Acqua > Fuoco, Elettro > Acqua
+
+- **Sistema Nature/Personalità** ⭐
+  - **21 nature diverse** che influenzano la crescita delle statistiche
+  - Ogni natura modifica Attacco, Difesa o Velocità
+  - Esempi:
+    - **Brave**: +10% Attacco, -10% Velocità
+    - **Bold**: +10% Difesa, -10% Attacco
+    - **Timid**: +10% Velocità, -10% Attacco
+  - Nature assegnate casualmente alla cattura/generazione
 
 - **Sistema di Livelli ed Esperienza**
   - I mostri guadagnano EXP dopo ogni battaglia
   - Level up automatico con aumento statistiche
+  - **Apprendimento automatico nuove mosse** salendo di livello
   - Barra EXP visuale per ogni mostro
   - Statistiche: HP, Attacco, Difesa, Velocità
 
@@ -69,11 +113,15 @@ npm start
   - 3 tipi di Poké Ball (normale, Great Ball, Ultra Ball)
   - Tasso di cattura influenzato da HP e tipo di ball
   - Limite squadra di 6 mostri
+  - **GnuGnu come mostro starter** automatico all'inizio
 
 ### 📋 Menu Completo (Tasto ESC)
 
 #### 👥 Squadra
 - Visualizza tutti i mostri catturati
+- **Tipi elementali** di ogni mostro
+- **Natura/personalità** con effetti
+- **Lista mosse correnti** (massimo 4)
 - Statistiche complete (HP, ATK, DEF, VEL)
 - Livello e barra esperienza
 - Stato HP con indicatore visuale
@@ -138,6 +186,11 @@ Le statistiche dei mostri sono calcolate con una formula simile a Pokémon:
 Stat = ((2 × BaseStat × Level) / 100) + Level + 10
 ```
 
+Le nature modificano le statistiche finali:
+- **Nature aggressive** (es. Brave, Adamant): +10% ATK
+- **Nature difensive** (es. Bold, Impish): +10% DEF
+- **Nature veloci** (es. Timid, Jolly): +10% VEL
+
 ### Calcolo Esperienza
 EXP richiesta per livello successivo:
 ```
@@ -147,15 +200,66 @@ EXP = Level³
 ### Calcolo Danni
 Sistema di battaglia con formula che considera:
 - Livello dell'attaccante
+- **Potenza della mossa usata**
 - Attacco dell'attaccante
 - Difesa del difensore
+- **Efficacia del tipo** (0x, 0.5x, 1x, 2x, 4x)
 - Variazione random (85%-100%)
 
+### ⚔️ Esempi di Mosse per Tipo
+
+**Fuoco** 🔥
+- Ember (40), Flame Wheel (60), Flamethrower (90), Fire Blast (110)
+
+**Acqua** 💧
+- Water Gun (40), Bubble Beam (65), Surf (90), Hydro Pump (110)
+
+**Erba** 🌿
+- Vine Whip (45), Razor Leaf (55), Energy Ball (90), Solar Beam (120)
+
+**Elettro** ⚡
+- Thunder Shock (40), Spark (65), Thunderbolt (90), Thunder (110)
+
+**Fantasma** 👻
+- Lick (30), Shadow Sneak (40), Shadow Ball (80), Shadow Claw (70)
+
+**Psico** 🧠
+- Confusion (50), Psybeam (65), Psychic (90), Zen Headbutt (80)
+
+**Folletto** ✨
+- Fairy Wind (40), Draining Kiss (50), Play Rough (90), Moonblast (95)
+
+**Acciaio** ⚙️
+- Metal Claw (50), Iron Head (80), Flash Cannon (80), Steel Wing (70)
+
+### 🎯 Vantaggi di Tipo
+
+**Super Efficace (2x danno):**
+- Fuoco > Erba, Ghiaccio, Coleottero, Acciaio
+- Acqua > Fuoco, Terra, Roccia
+- Erba > Acqua, Terra, Roccia
+- Elettro > Acqua, Volante
+- Fantasma > Fantasma, Psico
+- Folletto > Drago, Lotta, Buio
+
+**Non Molto Efficace (0.5x danno):**
+- Fuoco < Acqua, Fuoco, Roccia
+- Acqua < Erba, Acqua, Drago
+- Erba < Fuoco, Erba, Veleno, Volante
+- Elettro < Erba, Elettro, Drago
+
+**Nessun Effetto (0x danno):**
+- Elettro vs Terra
+- Fantasma vs Normale
+- Normale vs Fantasma
+
 ## 🎯 Obiettivi del Gioco
-1. Cattura tutti e 6 i mostriciattoli disponibili
-2. Sconfiggi tutti e 3 gli allenatori NPC
-3. Porta tutti i mostri al livello massimo
-4. Accumula ricchezze sconfiggendo allenatori
+1. **Inizia con GnuGnu** - Il tuo mostro starter Ghost/Psychic
+2. Cattura tutti e 6 i mostriciattoli disponibili
+3. Sconfiggi tutti e 3 gli allenatori NPC
+4. Porta i tuoi mostri al livello massimo
+5. Impara tutte le mosse più potenti
+6. Accumula ricchezze sconfiggendo allenatori
 
 ## 🛠️ Struttura Tecnica
 
@@ -194,12 +298,31 @@ Edita `game-data.js` nella sezione `MONSTER_SPECIES`:
 ```javascript
 'NuovoMostro': {
     name: 'Nuovo Mostro',
+    types: [ELEMENT_TYPES.FIRE, ELEMENT_TYPES.FLYING],
     baseHP: 50,
     baseAttack: 50,
     baseDefense: 50,
     baseSpeed: 50,
     catchRate: 0.7,
-    expYield: 70
+    expYield: 70,
+    learnset: {
+        1: 'TACKLE',
+        5: 'EMBER',
+        10: 'FLAME_WHEEL',
+        15: 'FLAMETHROWER'
+    }
+}
+```
+
+### Aggiungere Nuove Mosse
+Edita `game-data.js` nella sezione `MOVES`:
+```javascript
+NUOVA_MOSSA: { 
+    name: 'Nuova Mossa', 
+    type: ELEMENT_TYPES.FIRE, 
+    power: 80, 
+    accuracy: 95, 
+    description: 'Descrizione della mossa' 
 }
 ```
 
@@ -259,10 +382,21 @@ trainer4: {
 4. Cattura il tuo primo mostro
 
 ### Strategie di Battaglia
+- **Usa il vantaggio di tipo**: Fuoco contro Erba, Acqua contro Fuoco, ecc.
+- **Scegli la mossa giusta**: Ogni mostro ha 4 mosse, usa quella più efficace
+- **Considera la natura**: Mostri con natura Brave hanno più attacco
 - Abbassa gli HP del mostro nemico prima di catturarlo
 - Usa Ultra Ball per mostri difficili da catturare
 - Cura i tuoi mostri al Centro Pokémon gratuitamente
 - Accumula EXP combattendo mostri selvatici
+- **Fai level up per imparare mosse più potenti**
+
+### Gestione Squadra
+- **GnuGnu (Ghost/Psychic)** è forte contro Psico e Fantasma
+- **Blue Puffball (Water/Fairy)** è versatile con doppio tipo
+- **LavaFlare (Fire/Rock)** ha attacco alto ma è debole contro acqua
+- Bilancia i tipi della tua squadra per coprire tutte le debolezze
+- Controlla le nature per ottimizzare le statistiche
 
 ### Gestione Risorse
 - Non sprecare Poké Ball su mostri già catturati
@@ -286,6 +420,38 @@ trainer4: {
 - 📈 **Maestro**: Porta un mostro al livello 50
 - 💰 **Ricco**: Accumula 10,000 monete
 - 🏥 **Intoccabile**: Vinci 10 battaglie senza usare il Centro Pokémon
+- 🎯 **Stratega**: Vinci una battaglia usando solo mosse super efficaci
+- ⚡ **Potenza Massima**: Impara una mossa di potenza 100+
+- 🔥 **Maestro del Fuoco**: Porta un mostro di tipo Fuoco al livello 40
+- 🌿 **Guardiano della Natura**: Cattura tutti i mostri di tipo Erba
+- 👻 **Cacciatore di Fantasmi**: Usa GnuGnu per sconfiggere 10 mostri
+- 🎲 **Fortuna o Abilità**: Cattura un mostro con una Poké Ball normale al primo tentativo
+- 🧠 **Collezionista di Mosse**: Impara tutte e 4 le mosse disponibili con un mostro
+
+## 🆕 Novità di Questa Versione
+
+### Sistema di Mosse Completo
+- ✨ **55+ mosse uniche** con potenza, tipo e precisione differenti
+- 🎯 Selezione mossa interattiva durante le battaglie
+- 📚 Ogni mostro impara mosse automaticamente salendo di livello
+- 💪 Mosse più potenti sbloccate a livelli più alti
+
+### Sistema di Tipi Elementali
+- 🔥 **18 tipi elementali** completi con vantaggi/svantaggi
+- 🎭 **Dual-typing**: Molti mostri hanno 2 tipi
+- ⚖️ Calcolo efficacia automatico (super efficace, non molto efficace, nessun effetto)
+- 🎮 Strategia di tipo fondamentale per vincere
+
+### Sistema Nature/Personalità
+- ⭐ **21 nature diverse** che modificano le statistiche
+- 📊 Variabilità nei mostri catturati
+- 🎯 Nature aggressive, difensive, bilanciate e veloci
+- 🎲 Assegnazione casuale per rendere ogni mostro unico
+
+### Mostro Starter
+- 👻 **GnuGnu (Ghost/Psychic)** come compagno iniziale
+- 🚀 Inizia subito con un mostro potente
+- 📖 Impara mosse spettrali e psichiche
 
 ---
 
