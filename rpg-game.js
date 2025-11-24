@@ -102,7 +102,8 @@ class RPGGame {
         if (loadSave) {
             const loaded = this.loadGame();
             if (!loaded) {
-                // If load failed, start new game
+                // If load failed, start new game and notify user
+                console.warn('⚠️ Failed to load saved game. Starting new game...');
                 this.addStarterMonster();
             }
         } else {
