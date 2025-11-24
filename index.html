@@ -3,217 +3,438 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mappa 3D - Mostriciattoli</title>
-    <script type="importmap">
-    {
-        "imports": {
-            "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
-            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"
-        }
-    }
-    </script>
+    <title>Alpine Journey - Avventura Pokémon</title>
     <style>
-        * {
+        body, html {
             margin: 0;
             padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Arial', sans-serif;
+            width: 100%;
+            height: 100%;
             overflow: hidden;
-            background: #1a1a2e;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
 
-        #canvas-container {
+        /* Contenitore principale */
+        .scene {
+            position: relative;
             width: 100vw;
             height: 100vh;
+            background-color: #87ceeb;
         }
 
-        #ui-overlay {
+        /* Immagine di Sfondo Principale */
+        .bg-image {
             position: absolute;
-            top: 20px;
-            left: 20px;
-            color: white;
-            background: rgba(0, 0, 0, 0.7);
-            padding: 20px;
-            border-radius: 10px;
-            max-width: 300px;
-            max-height: 85vh;
-            overflow-y: auto;
-            backdrop-filter: blur(10px);
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url('modelli_3D/background.jpeg');
+            background-size: cover;
+            background-position: center;
+            z-index: 1;
+        }
+
+        /* --- EFFETTO ACQUA (LAGO) --- */
+        /* Creiamo un livello sopra il lago che usa la stessa immagine ma distorta */
+        .water-layer {
+            position: absolute;
+            /* Posizionato sulla zona del lago nell'immagine */
+            top: 40%;
+            left: 0;
+            width: 100%;
+            height: 30%;
+            
+            /* Cloniamo lo sfondo */
+            background-image: url('modelli_3D/background.jpeg');
+            background-size: cover;
+            background-position: center 40%;
+            
+            /* Applichiamo il filtro SVG */
+            filter: url('#turbulence-filter');
+            opacity: 0.7;
+            z-index: 2;
+            
+            /* Maschera sfumata per bordi naturali */
+            mask-image: linear-gradient(to bottom, transparent, black 15%, black 85%, transparent);
+            -webkit-mask-image: linear-gradient(to bottom, transparent, black 15%, black 85%, transparent);
+        }
+
+        /* --- EFFETTO NUVOLE --- */
+        .clouds {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 200%;
+            height: 35%;
+            background: 
+                radial-gradient(ellipse 800px 300px at 20% 50%, rgba(255, 255, 255, 0.4), transparent),
+                radial-gradient(ellipse 600px 250px at 60% 30%, rgba(255, 255, 255, 0.3), transparent),
+                radial-gradient(ellipse 700px 280px at 90% 60%, rgba(255, 255, 255, 0.35), transparent);
+            opacity: 0.5;
+            z-index: 3;
+            animation: cloudMove 90s linear infinite;
+            pointer-events: none;
+            mix-blend-mode: screen;
+        }
+
+        @keyframes cloudMove {
+            from { transform: translateX(0); }
+            to { transform: translateX(-50%); }
+        }
+
+        /* --- EFFETTO VENTO (FOGLIE/POLLINE) --- */
+        .wind-particles {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            z-index: 4;
+            pointer-events: none;
+        }
+        
+        .leaf {
+            position: absolute;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.8), rgba(255, 255, 200, 0.4));
+            border-radius: 50%;
+            animation: fall linear infinite;
+            box-shadow: 0 0 3px rgba(255, 255, 255, 0.5);
+        }
+
+        @keyframes fall {
+            0% { 
+                transform: translate(0, 0) rotate(0deg); 
+                opacity: 0; 
+            }
+            10% { opacity: 1; }
+            90% { opacity: 0.8; }
+            100% { 
+                transform: translate(100vw, 30vh) rotate(720deg); 
+                opacity: 0; 
+            }
+        }
+
+        /* --- EFFETTO UCCELLI --- */
+        .birds {
+            position: absolute;
+            top: 15%;
+            left: 0;
+            width: 100%;
+            height: 30%;
+            z-index: 3;
+            pointer-events: none;
+        }
+
+        .bird {
+            position: absolute;
+            font-size: 20px;
+            animation: flyBird linear infinite;
+            opacity: 0;
+        }
+
+        @keyframes flyBird {
+            0% { 
+                transform: translateX(-100px) translateY(0);
+                opacity: 0;
+            }
+            10% { opacity: 0.6; }
+            50% { 
+                transform: translateX(50vw) translateY(-20px);
+                opacity: 0.8;
+            }
+            90% { opacity: 0.6; }
+            100% { 
+                transform: translateX(100vw) translateY(0);
+                opacity: 0;
+            }
+        }
+
+        /* --- UI / INTERFACCIA --- */
+        .ui-layer {
+            position: absolute;
+            z-index: 10;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: radial-gradient(circle at center, transparent 40%, rgba(0,0,0,0.3) 100%);
         }
 
         h1 {
-            font-size: 24px;
-            margin-bottom: 15px;
-            color: #00d9ff;
+            color: #fff;
+            font-size: 5rem;
+            text-transform: uppercase;
+            text-shadow: 
+                0 0 10px rgba(59, 76, 202, 0.8),
+                0 0 20px rgba(59, 76, 202, 0.6),
+                0 4px 15px rgba(0,0,0,0.9),
+                0 8px 25px rgba(0,0,0,0.7);
+            margin-bottom: 30px;
+            letter-spacing: 8px;
+            font-weight: 900;
+            -webkit-text-stroke: 3px #3b4cca;
+            animation: titleGlow 3s ease-in-out infinite;
         }
 
-        .monster-control {
-            margin: 15px 0;
-            padding: 15px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 8px;
-            border: 1px solid rgba(255, 255, 255, 0.2);
+        @keyframes titleGlow {
+            0%, 100% { 
+                text-shadow: 
+                    0 0 10px rgba(59, 76, 202, 0.8),
+                    0 0 20px rgba(59, 76, 202, 0.6),
+                    0 4px 15px rgba(0,0,0,0.9);
+            }
+            50% { 
+                text-shadow: 
+                    0 0 20px rgba(59, 76, 202, 1),
+                    0 0 40px rgba(59, 76, 202, 0.8),
+                    0 4px 15px rgba(0,0,0,0.9),
+                    0 0 60px rgba(59, 76, 202, 0.5);
+            }
         }
 
-        .monster-control h3 {
-            color: #ffd700;
-            margin-bottom: 10px;
-            font-size: 16px;
+        .subtitle {
+            color: #fff;
+            font-size: 1.5rem;
+            text-shadow: 0 2px 8px rgba(0,0,0,0.8);
+            margin-bottom: 40px;
+            letter-spacing: 3px;
+            font-weight: 600;
+            opacity: 0.9;
         }
 
-        button {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        .start-btn {
+            padding: 20px 50px;
+            font-size: 1.8rem;
             color: white;
-            border: none;
-            padding: 10px 15px;
-            margin: 5px;
-            border-radius: 5px;
+            background: linear-gradient(45deg, #ff0000, #cc0000);
+            border: 5px solid white;
+            border-radius: 50px;
             cursor: pointer;
-            font-size: 14px;
-            transition: all 0.3s;
+            box-shadow: 
+                0 10px 25px rgba(0,0,0,0.5),
+                0 0 20px rgba(255, 0, 0, 0.4);
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            font-weight: bold;
+            text-decoration: none;
+            display: inline-block;
+            animation: btnPulse 2s ease-in-out infinite;
         }
 
-        button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        @keyframes btnPulse {
+            0%, 100% { 
+                transform: scale(1);
+                box-shadow: 
+                    0 10px 25px rgba(0,0,0,0.5),
+                    0 0 20px rgba(255, 0, 0, 0.4);
+            }
+            50% { 
+                transform: scale(1.05);
+                box-shadow: 
+                    0 15px 35px rgba(0,0,0,0.6),
+                    0 0 40px rgba(255, 0, 0, 0.6);
+            }
         }
 
-        button:active {
-            transform: translateY(0);
+        .start-btn:hover {
+            transform: scale(1.15);
+            box-shadow: 
+                0 15px 40px rgba(0,0,0,0.7),
+                0 0 50px rgba(255, 0, 0, 0.9),
+                inset 0 0 20px rgba(255, 100, 100, 0.3);
+            animation: none;
         }
 
-        .controls {
-            margin-top: 20px;
-            padding-top: 15px;
-            border-top: 1px solid rgba(255, 255, 255, 0.2);
+        .start-btn:active {
+            transform: scale(1.05);
         }
 
-        .controls p {
-            font-size: 12px;
-            line-height: 1.6;
-            color: #b0b0b0;
-        }
-
-        #loading {
+        /* Effetto sparkle sul bottone */
+        .start-btn::before {
+            content: '✨';
             position: absolute;
-            top: 50%;
+            left: -30px;
+            animation: sparkle 1.5s ease-in-out infinite;
+        }
+
+        .start-btn::after {
+            content: '✨';
+            position: absolute;
+            right: -30px;
+            animation: sparkle 1.5s ease-in-out infinite 0.75s;
+        }
+
+        @keyframes sparkle {
+            0%, 100% { 
+                opacity: 0.3;
+                transform: scale(0.8);
+            }
+            50% { 
+                opacity: 1;
+                transform: scale(1.2);
+            }
+        }
+
+        /* Info box in basso */
+        .info-box {
+            position: absolute;
+            bottom: 30px;
             left: 50%;
-            transform: translate(-50%, -50%);
+            transform: translateX(-50%);
             color: white;
-            font-size: 24px;
             text-align: center;
+            font-size: 0.9rem;
+            text-shadow: 0 2px 5px rgba(0,0,0,0.8);
+            opacity: 0.8;
+            z-index: 11;
         }
 
-        .loader {
-            border: 5px solid rgba(255, 255, 255, 0.1);
-            border-top: 5px solid #00d9ff;
-            border-radius: 50%;
-            width: 60px;
-            height: 60px;
-            animation: spin 1s linear infinite;
-            margin: 20px auto;
+        /* Responsive */
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 3rem;
+                letter-spacing: 4px;
+                -webkit-text-stroke: 2px #3b4cca;
+            }
+            .subtitle {
+                font-size: 1.2rem;
+            }
+            .start-btn {
+                padding: 15px 35px;
+                font-size: 1.4rem;
+            }
         }
 
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        .hidden {
-            display: none;
-        }
     </style>
 </head>
 <body>
-    <div id="loading">
-        <div class="loader"></div>
-        <p>Caricamento mostriciattoli...</p>
-    </div>
 
-    <div id="canvas-container"></div>
+    <!-- Filtro SVG invisibile per l'acqua -->
+    <svg style="display: none;">
+        <filter id="turbulence-filter">
+            <feTurbulence type="fractalNoise" baseFrequency="0.01 0.08" numOctaves="3" result="warp">
+                <animate attributeName="baseFrequency" 
+                         dur="12s" 
+                         values="0.01 0.08; 0.01 0.12; 0.01 0.08" 
+                         repeatCount="indefinite"/>
+            </feTurbulence>
+            <feDisplacementMap xChannelSelector="R" yChannelSelector="G" scale="25" 
+                               in="SourceGraphic" in2="warp" />
+        </filter>
+    </svg>
 
-    <div id="ui-overlay" class="hidden">
-        <h1>🎮 Controlli Mostri</h1>
-        
-        <div class="monster-control">
-            <h3>🔵 Blue Puffball</h3>
-            <button onclick="game.animateMonster('blue', 'jump')">Salta</button>
-            <button onclick="game.animateMonster('blue', 'spin')">Gira</button>
-            <button onclick="game.toggleMovement('blue')">Muovi</button>
+    <div class="scene">
+        <!-- Sfondo statico -->
+        <div class="bg-image"></div>
+
+        <!-- Livello Acqua Animata -->
+        <div class="water-layer"></div>
+
+        <!-- Nuvole che scorrono -->
+        <div class="clouds"></div>
+
+        <!-- Uccelli che volano -->
+        <div class="birds" id="birds"></div>
+
+        <!-- Particelle di Vento -->
+        <div class="wind-particles" id="wind"></div>
+
+        <!-- Interfaccia Utente -->
+        <div class="ui-layer">
+            <h1>Alpine Journey</h1>
+            <div class="subtitle">🏔️ Inizia la tua avventura Pokémon! 🏔️</div>
+            <a href="rpg.html" class="start-btn">Inizia Avventura</a>
         </div>
 
-        <div class="monster-control">
-            <h3>👻 Gnugnu</h3>
-            <button onclick="game.animateMonster('gnugnu', 'jump')">Salta</button>
-            <button onclick="game.animateMonster('gnugnu', 'spin')">Gira</button>
-            <button onclick="game.toggleMovement('gnugnu')">Muovi</button>
-        </div>
-
-        <div class="monster-control">
-            <h3>🌸 Lotus</h3>
-            <button onclick="game.animateMonster('lotus', 'jump')">Salta</button>
-            <button onclick="game.animateMonster('lotus', 'spin')">Gira</button>
-            <button onclick="game.toggleMovement('lotus')">Muovi</button>
-        </div>
-
-        <div class="monster-control">
-            <h3>🌺 Blossom</h3>
-            <button onclick="game.animateMonster('blossom', 'jump')">Salta</button>
-            <button onclick="game.animateMonster('blossom', 'spin')">Gira</button>
-            <button onclick="game.toggleMovement('blossom')">Muovi</button>
-        </div>
-
-        <div class="monster-control">
-            <h3>🔥 LavaFlare</h3>
-            <button onclick="game.animateMonster('lavaflare', 'jump')">Salta</button>
-            <button onclick="game.animateMonster('lavaflare', 'spin')">Gira</button>
-            <button onclick="game.toggleMovement('lavaflare')">Muovi</button>
-        </div>
-
-        <div class="monster-control">
-            <h3>🦁 Pyrolynx</h3>
-            <button onclick="game.animateMonster('pyrolynx', 'jump')">Salta</button>
-            <button onclick="game.animateMonster('pyrolynx', 'spin')">Gira</button>
-            <button onclick="game.toggleMovement('pyrolynx')">Muovi</button>
-        </div>
-
-        <div class="monster-control">
-            <h3>👤 Player 1</h3>
-            <button onclick="game.animateMonster('player1', 'jump')">Salta</button>
-            <button onclick="game.animateMonster('player1', 'spin')">Gira</button>
-            <button onclick="game.animateMonster('player1', 'walk')">Cammina</button>
-            <button onclick="game.toggleMovement('player1')">Muovi</button>
-        </div>
-
-        <div class="monster-control">
-            <h3>👥 Player 2</h3>
-            <button onclick="game.animateMonster('player2', 'jump')">Salta</button>
-            <button onclick="game.animateMonster('player2', 'spin')">Gira</button>
-            <button onclick="game.toggleMovement('player2')">Muovi</button>
-        </div>
-
-        <div class="monster-control">
-            <h3>🏥 Pokémon Center</h3>
-            <button onclick="game.animateMonster('pokecenter', 'jump')">Salta</button>
-            <button onclick="game.animateMonster('pokecenter', 'spin')">Gira</button>
-        </div>
-
-        <div class="monster-control">
-            <h3>🏪 Nigrolino Market</h3>
-            <button onclick="game.animateMonster('nigrolino', 'jump')">Salta</button>
-            <button onclick="game.animateMonster('nigrolino', 'spin')">Gira</button>
-        </div>
-
-        <div class="controls">
-            <p><strong>🖱️ Mouse:</strong> Ruota camera</p>
-            <p><strong>🔍 Scroll:</strong> Zoom</p>
-            <p><strong>⌨️ WASD:</strong> Muovi camera</p>
+        <!-- Info box -->
+        <div class="info-box">
+            Esplora le montagne alpine e cattura nuovi Pokémon!
         </div>
     </div>
 
-    <script type="module" src="game.js"></script>
+    <script>
+        // Script per generare particelle di vento/foglie/polline
+        const windContainer = document.getElementById('wind');
+
+        function createLeaf() {
+            const leaf = document.createElement('div');
+            leaf.classList.add('leaf');
+            
+            // Posizione e dimensione casuale
+            const startX = Math.random() * -150 - 50;
+            const startY = Math.random() * 100;
+            const size = Math.random() * 6 + 3;
+            const duration = Math.random() * 8 + 8;
+
+            leaf.style.left = `${startX}px`;
+            leaf.style.top = `${startY}vh`;
+            leaf.style.width = `${size}px`;
+            leaf.style.height = `${size}px`;
+            leaf.style.animationDuration = `${duration}s`;
+
+            windContainer.appendChild(leaf);
+
+            setTimeout(() => {
+                leaf.remove();
+            }, duration * 1000);
+        }
+
+        // Crea una particella ogni 400ms
+        setInterval(createLeaf, 400);
+
+        // Script per generare uccelli che volano
+        const birdsContainer = document.getElementById('birds');
+        const birdSymbols = ['🦅', '🦆', '🕊️'];
+
+        function createBird() {
+            const bird = document.createElement('div');
+            bird.classList.add('bird');
+            bird.textContent = birdSymbols[Math.floor(Math.random() * birdSymbols.length)];
+            
+            const startY = Math.random() * 60;
+            const duration = Math.random() * 15 + 20;
+            const delay = Math.random() * 10;
+
+            bird.style.top = `${startY}%`;
+            bird.style.animationDuration = `${duration}s`;
+            bird.style.animationDelay = `${delay}s`;
+
+            birdsContainer.appendChild(bird);
+
+            setTimeout(() => {
+                bird.remove();
+                // Crea un nuovo uccello dopo che questo è scomparso
+                setTimeout(createBird, Math.random() * 10000);
+            }, (duration + delay) * 1000);
+        }
+
+        // Crea 3 uccelli iniziali
+        for (let i = 0; i < 3; i++) {
+            setTimeout(createBird, i * 8000);
+        }
+
+        // Animazione JS aggiuntiva per l'acqua (opzionale, migliora l'effetto SVG)
+        const turb = document.querySelector('feTurbulence');
+        if (turb) {
+            let frames = 0;
+            
+            function animateWater() {
+                frames += 0.03;
+                const valX = 0.01 + Math.sin(frames * 0.15) * 0.003;
+                const valY = 0.08 + Math.cos(frames * 0.25) * 0.015;
+                turb.setAttribute('baseFrequency', `${valX} ${valY}`);
+                requestAnimationFrame(animateWater);
+            }
+            
+            animateWater();
+        }
+
+        // Preload della pagina rpg.html per transizione più fluida
+        const link = document.createElement('link');
+        link.rel = 'prefetch';
+        link.href = 'rpg.html';
+        document.head.appendChild(link);
+    </script>
 </body>
 </html>
