@@ -1,8 +1,11 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { Monster, PlayerInventory, MONSTER_SPECIES, ITEMS, NPCS } from './game-data.js';
+import { Monster, PlayerInventory, MONSTER_SPECIES, ITEMS, NPCS, MOVES } from './game-data.js';
 import { UIManager } from './ui-manager.js';
+
+// Make MOVES globally accessible for UI
+window.MOVES = MOVES;
 
 class RPGGame {
     constructor() {
@@ -49,11 +52,21 @@ class RPGGame {
         window.uiManager = this.uiManager; // Make accessible globally for onclick handlers
         window.rpgGame = this; // Make game accessible globally
         
+        // Add GnuGnu as starter monster
+        this.addStarterMonster();
+        
         await this.loadPlayer();
         await this.createVillageMap();
         
         this.animate();
         this.hideLoading();
+    }
+    
+    addStarterMonster() {
+        // Create GnuGnu as starter monster at level 5
+        const starterMonster = new Monster('Gnugnu', 5);
+        this.playerTeam.push(starterMonster);
+        console.log('✓ Starter monster added: Gnugnu');
     }
 
     setupScene() {
@@ -621,12 +634,7 @@ class RPGGame {
 
     startWildBattle(monsterMesh) {
         if (this.playerTeam.length === 0) {
-            alert('Non hai mostri nella squadra! Cattura un mostro usando una Poké Ball!');
-            return;
-        }
-        
-        if (this.playerTeam.length >= 6) {
-            alert('Hai già 6 mostri! Non puoi catturarne altri.');
+            alert('Non hai mostri nella squadra!');
             return;
         }
 
@@ -669,9 +677,9 @@ class RPGGame {
         this.uiManager.updateBattleUI(this.playerTeam[0], this.currentBattleEnemyMonster);
     }
 
-    handleBattleAction(action) {
+    handleBattleAction(action, moveIndex = 0) {
         if (action === 'attack') {
-            this.battleAttack();
+            this.battleAttack(moveIndex);
         } else if (action === 'catch') {
             if (this.currentTrainer) {
                 this.uiManager.addBattleLog('Non puoi catturare i mostri degli allenatori!');
@@ -689,18 +697,45 @@ class RPGGame {
         }
     }
     
-    battleAttack() {
+    battleAttack(moveIndex = 0) {
         const playerMonster = this.playerTeam[0];
         const enemyMonster = this.currentBattleEnemyMonster;
         
-        // Calculate damage (simplified Pokemon formula)
+        // Get the move to use
+        const move = playerMonster.getMove(moveIndex);
+        if (!move) {
+            this.uiManager.addBattleLog('Mossa non disponibile!');
+            return;
+        }
+        
+        // Check accuracy
+        const hitChance = Math.random() * 100;
+        if (hitChance > move.accuracy) {
+            this.uiManager.addBattleLog(`${playerMonster.name} usa ${move.name} ma manca!`);
+            setTimeout(() => this.enemyAttack(), 1500);
+            return;
+        }
+        
+        // Calculate type effectiveness
+        const effectiveness = playerMonster.getTypeEffectiveness(move.type, enemyMonster.types);
+        
+        // Calculate damage using Pokemon formula with move power
         const attackerAttack = playerMonster.attack;
         const defenderDefense = enemyMonster.defense;
-        const baseDamage = Math.floor(((2 * playerMonster.level / 5 + 2) * 50 * attackerAttack / defenderDefense) / 50) + 2;
-        const damage = Math.floor(baseDamage * (0.85 + Math.random() * 0.15));
+        const baseDamage = Math.floor(((2 * playerMonster.level / 5 + 2) * move.power * attackerAttack / defenderDefense) / 50) + 2;
+        const damage = Math.floor(baseDamage * effectiveness * (0.85 + Math.random() * 0.15));
         
         const enemyDied = enemyMonster.takeDamage(damage);
-        this.uiManager.addBattleLog(`${playerMonster.name} attacca! ${damage} HP di danno!`);
+        
+        this.uiManager.addBattleLog(`${playerMonster.name} usa ${move.name}!`);
+        if (effectiveness > 1) {
+            this.uiManager.addBattleLog('È super efficace!');
+        } else if (effectiveness < 1 && effectiveness > 0) {
+            this.uiManager.addBattleLog('Non è molto efficace...');
+        } else if (effectiveness === 0) {
+            this.uiManager.addBattleLog('Non ha effetto...');
+        }
+        this.uiManager.addBattleLog(`${damage} HP di danno!`);
         this.uiManager.updateBattleUI(playerMonster, enemyMonster);
         
         if (enemyDied) {
@@ -716,13 +751,53 @@ class RPGGame {
         const playerMonster = this.playerTeam[0];
         const enemyMonster = this.currentBattleEnemyMonster;
         
+        // Enemy picks a random move
+        const moveIndex = Math.floor(Math.random() * enemyMonster.moves.length);
+        const move = enemyMonster.getMove(moveIndex);
+        
+        if (!move) {
+            // Fallback to basic attack if no move available
+            const damage = Math.floor(enemyMonster.attack * 0.5);
+            const playerDied = playerMonster.takeDamage(damage);
+            this.uiManager.addBattleLog(`${enemyMonster.name} attacca! ${damage} HP di danno!`);
+            this.uiManager.updateBattleUI(playerMonster, enemyMonster);
+            
+            if (playerDied) {
+                setTimeout(() => {
+                    this.uiManager.addBattleLog(`${playerMonster.name} è esausto!`);
+                    setTimeout(() => this.endBattle(false), 2000);
+                }, 1000);
+            }
+            return;
+        }
+        
+        // Check accuracy
+        const hitChance = Math.random() * 100;
+        if (hitChance > move.accuracy) {
+            this.uiManager.addBattleLog(`${enemyMonster.name} usa ${move.name} ma manca!`);
+            return;
+        }
+        
+        // Calculate type effectiveness
+        const effectiveness = enemyMonster.getTypeEffectiveness(move.type, playerMonster.types);
+        
+        // Calculate damage
         const attackerAttack = enemyMonster.attack;
         const defenderDefense = playerMonster.defense;
-        const baseDamage = Math.floor(((2 * enemyMonster.level / 5 + 2) * 50 * attackerAttack / defenderDefense) / 50) + 2;
-        const damage = Math.floor(baseDamage * (0.85 + Math.random() * 0.15));
+        const baseDamage = Math.floor(((2 * enemyMonster.level / 5 + 2) * move.power * attackerAttack / defenderDefense) / 50) + 2;
+        const damage = Math.floor(baseDamage * effectiveness * (0.85 + Math.random() * 0.15));
         
         const playerDied = playerMonster.takeDamage(damage);
-        this.uiManager.addBattleLog(`${enemyMonster.name} attacca! ${damage} HP di danno!`);
+        
+        this.uiManager.addBattleLog(`${enemyMonster.name} usa ${move.name}!`);
+        if (effectiveness > 1) {
+            this.uiManager.addBattleLog('È super efficace!');
+        } else if (effectiveness < 1 && effectiveness > 0) {
+            this.uiManager.addBattleLog('Non è molto efficace...');
+        } else if (effectiveness === 0) {
+            this.uiManager.addBattleLog('Non ha effetto...');
+        }
+        this.uiManager.addBattleLog(`${damage} HP di danno!`);
         this.uiManager.updateBattleUI(playerMonster, enemyMonster);
         
         if (playerDied) {
@@ -778,6 +853,11 @@ class RPGGame {
     }
     
     useCatchItem(itemId) {
+        if (this.playerTeam.length >= 6) {
+            this.uiManager.addBattleLog('La tua squadra è piena! Non puoi catturare altri mostri.');
+            return;
+        }
+        
         if (!this.inventory.useItem(itemId)) {
             this.uiManager.addBattleLog('Non hai questo oggetto!');
             return;

@@ -468,6 +468,92 @@
     transform: none;
 }
 
+/* Battle Moves UI */
+.battle-moves {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    margin-top: 15px;
+}
+
+.battle-move-btn {
+    padding: 15px;
+    background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
+    border: 3px solid #2c5aa0;
+    border-radius: 10px;
+    color: white;
+    font-family: inherit;
+    font-size: 10px;
+    cursor: pointer;
+    transition: all 0.3s;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 5px;
+}
+
+.battle-move-btn:hover {
+    background: linear-gradient(135deg, #357abd 0%, #4a90e2 100%);
+    transform: scale(1.05);
+}
+
+.battle-move-btn .move-name {
+    font-weight: bold;
+    font-size: 11px;
+}
+
+.battle-move-btn .move-type {
+    font-size: 9px;
+    opacity: 0.9;
+}
+
+.battle-move-btn .move-power {
+    font-size: 9px;
+    opacity: 0.8;
+}
+
+/* Monster Type and Nature Display */
+.monster-types {
+    font-size: 10px;
+    color: #ffd700;
+    margin: 5px 0;
+}
+
+.monster-nature {
+    font-size: 10px;
+    color: #00d9ff;
+    margin: 5px 0;
+}
+
+/* Moves Display in Team Card */
+.moves-display {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.moves-label {
+    font-size: 10px;
+    color: #ffd700;
+    margin-bottom: 5px;
+}
+
+.moves-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+}
+
+.move-chip {
+    background: rgba(74, 144, 226, 0.3);
+    border: 1px solid #4a90e2;
+    border-radius: 5px;
+    padding: 3px 8px;
+    font-size: 8px;
+    color: #fff;
+    cursor: help;
+}
+
 /* Utility Classes */
 .empty-message {
     text-align: center;
