@@ -16,5 +16,8 @@
     "animation"
   ],
   "author": "",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "three": "^0.169.0"
+  }
 }
