@@ -200,7 +200,8 @@ async function testBattleSystem() {
     // Test battle initiation would require actual interaction
     console.log('Battle system requires manual testing with actual monsters');
     testResults.battleSystem.push({
-        passed: 'manual_test_required',
+        passed: false,
+        message: 'Manual test required - need monsters in team',
         teamSize: game.playerTeam.length
     });
     
