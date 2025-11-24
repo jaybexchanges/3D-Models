@@ -9,7 +9,8 @@ const testResults = {
     battleSystem: [],
     captureSystem: [],
     expSystem: [],
-    moneySystem: []
+    moneySystem: [],
+    inventorySystem: []
 };
 
 // Test 1: Player Movement
@@ -241,14 +242,14 @@ function testInventorySystem() {
     
     console.log('Inventory:', inventory);
     
-    testResults.expSystem.push({
+    testResults.inventorySystem.push({
         inventory,
         hasStartingMoney: game.inventory.money > 0,
         hasItems: Object.keys(game.inventory.items).length > 0,
         passed: true
     });
     
-    return testResults.expSystem;
+    return testResults.inventorySystem;
 }
 
 // Run all tests
