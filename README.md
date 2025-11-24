@@ -17,9 +17,9 @@ Un'avventura RPG 3D completa in stile Pokémon con sistema di cattura, battaglie
   - Base: HP 55, ATK 45, DEF 55, VEL 50
   - Mosse speciali: Solar Beam, Energy Ball, Moonblast, Petal Dance
   
-- **Blossom** 🌺🌿 - Creatura fiorita (Grass)
+- **Blossom** 🌺🌿🦅 - Creatura fiorita (Grass/Flying)
   - Base: HP 48, ATK 52, DEF 43, VEL 65
-  - Mosse speciali: Razor Leaf, Solar Beam, Energy Ball
+  - Mosse speciali: Razor Leaf, Solar Beam, Energy Ball, Quick Attack
   
 - **LavaFlare** 🔥🪨 - Mostro di fuoco (Fire/Rock)
   - Base: HP 58, ATK 64, DEF 50, VEL 55

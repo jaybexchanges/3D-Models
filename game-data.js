@@ -270,7 +270,7 @@ export const MONSTER_SPECIES = {
     },
     'Blossom': {
         name: 'Blossom',
-        types: [ELEMENT_TYPES.GRASS],
+        types: [ELEMENT_TYPES.GRASS, ELEMENT_TYPES.FLYING],
         baseHP: 48,
         baseAttack: 52,
         baseDefense: 43,

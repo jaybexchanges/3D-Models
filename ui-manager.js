@@ -232,7 +232,7 @@ export class UIManager {
                     <p class="moves-label">Mosse:</p>
                     <div class="moves-list">
                         ${monster.moves.map(moveKey => {
-                            const move = window.MOVES ? window.MOVES[moveKey] : null;
+                            const move = MOVES[moveKey];
                             return move ? `<span class="move-chip" title="${move.description}">${move.name}</span>` : '';
                         }).join('')}
                     </div>
