@@ -40,6 +40,9 @@ class RPGGame {
         this.loader = new GLTFLoader();
         this.uiManager = null;
         
+        // Landing page animation duration (matches CSS transition)
+        this.LANDING_FADE_DURATION = 800;
+        
         this.showLandingPage();
     }
 
@@ -55,9 +58,12 @@ class RPGGame {
             continueBtn.style.display = 'block';
         }
         
-        // Set up button handlers
-        continueBtn.addEventListener('click', () => this.startGame(true));
-        newGameBtn.addEventListener('click', () => this.startGame(false));
+        // Set up button handlers (use named functions to avoid duplicates)
+        const startWithSave = () => this.startGame(true);
+        const startNewGame = () => this.startGame(false);
+        
+        continueBtn.addEventListener('click', startWithSave, { once: true });
+        newGameBtn.addEventListener('click', startNewGame, { once: true });
     }
 
     async startGame(loadSave) {
@@ -75,7 +81,7 @@ class RPGGame {
             
             // Initialize game
             await this.init(loadSave);
-        }, 800);
+        }, this.LANDING_FADE_DURATION);
     }
 
     async init(loadSave = false) {
