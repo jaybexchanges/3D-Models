@@ -1192,12 +1192,12 @@ class RPGGame {
             saveData.npcs[npcId] = NPCS[npcId].defeated;
         });
         
-        localStorage.setItem('monsterquest_save', JSON.stringify(saveData));
+        localStorage.setItem('swissmon_save', JSON.stringify(saveData));
         console.log('Game saved!');
     }
     
     loadGame() {
-        const savedData = localStorage.getItem('monsterquest_save');
+        const savedData = localStorage.getItem('swissmon_save');
         if (!savedData) {
             return false;
         }
