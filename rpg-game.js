@@ -26,6 +26,7 @@ class RPGGame {
         this.battleTurn = 'player';
         this.npcs = {};
         this.bestiary = new Set(); // Track discovered monsters
+        this.gameStarted = false; // Track if game has been started
         
         // Player movement
         this.keys = {
@@ -39,10 +40,45 @@ class RPGGame {
         this.loader = new GLTFLoader();
         this.uiManager = null;
         
-        this.init();
+        this.showLandingPage();
     }
 
-    async init() {
+    showLandingPage() {
+        // Check if there's a saved game
+        const hasSavedGame = localStorage.getItem('monsterquest_save') !== null;
+        
+        const continueBtn = document.getElementById('continue-btn');
+        const newGameBtn = document.getElementById('new-game-btn');
+        
+        // Show continue button only if there's a saved game
+        if (hasSavedGame) {
+            continueBtn.style.display = 'block';
+        }
+        
+        // Set up button handlers
+        continueBtn.addEventListener('click', () => this.startGame(true));
+        newGameBtn.addEventListener('click', () => this.startGame(false));
+    }
+
+    async startGame(loadSave) {
+        if (this.gameStarted) return;
+        this.gameStarted = true;
+        
+        // Fade out landing page
+        const landingPage = document.getElementById('landing-page');
+        landingPage.classList.add('fade-out');
+        
+        // Wait for fade out animation
+        setTimeout(async () => {
+            landingPage.style.display = 'none';
+            document.getElementById('loading').classList.remove('hidden');
+            
+            // Initialize game
+            await this.init(loadSave);
+        }, 800);
+    }
+
+    async init(loadSave = false) {
         this.setupScene();
         this.setupLights();
         this.setupControls();
@@ -53,8 +89,19 @@ class RPGGame {
         window.uiManager = this.uiManager; // Make accessible globally for onclick handlers
         window.rpgGame = this; // Make game accessible globally
         
-        // Add GnuGnu as starter monster
-        this.addStarterMonster();
+        // Load saved game or start new game
+        if (loadSave) {
+            const loaded = this.loadGame();
+            if (!loaded) {
+                // If load failed, start new game
+                this.addStarterMonster();
+            }
+        } else {
+            // New game - clear any existing save
+            localStorage.removeItem('monsterquest_save');
+            // Add GnuGnu as starter monster
+            this.addStarterMonster();
+        }
         
         await this.loadPlayer();
         await this.createVillageMap();
