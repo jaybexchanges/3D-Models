@@ -12,8 +12,6 @@
  * Run with: node test-visual-rendering.js
  */
 
-import * as THREE from 'three';
-
 // Mock browser environment for testing
 const mockWindow = {
     addEventListener: () => {},
