@@ -124,7 +124,8 @@ export class RPGGame {
 
         this.renderer = new THREE.WebGLRenderer({ 
             antialias: true,
-            powerPreference: 'high-performance'
+            powerPreference: 'high-performance',
+            preserveDrawingBuffer: true  // Required for screenshot capture
         });
         this.renderer.setSize(window.innerWidth, window.innerHeight);
         this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));

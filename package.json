@@ -7,7 +7,8 @@
   "scripts": {
     "start": "python3 -m http.server 8000",
     "dev": "python3 -m http.server 8000",
-    "test": "node test-moves-system.js && node test-capture-system.js && node test-geometry-system.js"
+    "test": "node test-moves-system.js && node test-capture-system.js && node test-geometry-system.js",
+    "screenshots": "node capture-screenshots.js"
   },
   "keywords": [
     "3D",
@@ -22,6 +23,7 @@
     "three": "^0.169.0"
   },
   "devDependencies": {
+    "puppeteer-core": "^23.0.0",
     "typescript": "^5.9.3"
   }
 }
