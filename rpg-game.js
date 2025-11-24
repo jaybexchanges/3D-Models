@@ -1,14 +1,17 @@
+// @ts-nocheck
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { Monster, PlayerInventory, MONSTER_SPECIES, ITEMS, NPCS, MOVES } from './game-data.js';
 import { UIManager } from './ui-manager.js';
 
-// Make MOVES globally accessible for UI
-window.MOVES = MOVES;
+// Make MOVES globally accessible for UI in browser context
+if (typeof window !== 'undefined') {
+    window.MOVES = MOVES;
+}
 
-class RPGGame {
-    constructor() {
+export class RPGGame {
+    constructor(autoStart = true) {
         this.scene = null;
         this.camera = null;
         this.renderer = null;
@@ -38,12 +41,25 @@ class RPGGame {
         this.clock = new THREE.Clock();
         this.loader = new GLTFLoader();
         this.uiManager = null;
+        this.mapGroup = null;
+        this.mapBounds = { minX: -45, maxX: 45, minZ: -45, maxZ: 45 };
+        this.getGroundHeight = () => 0;
+        this.playerBaseHeight = 0.6;
+        this.wildNoiseSeed = Math.random() * 1000;
+        this.autoStart = autoStart;
         
         // Auto-start game
-        this.init(false).catch(error => {
-            console.error('Failed to initialize game:', error);
-            document.getElementById('loading').innerHTML = '<p>Errore nel caricamento del gioco. Ricarica la pagina.</p>';
-        });
+        if (autoStart) {
+            this.init(false).catch(error => {
+                console.error('Failed to initialize game:', error);
+                if (typeof document !== 'undefined') {
+                    const loadingEl = document.getElementById('loading');
+                    if (loadingEl) {
+                        loadingEl.innerHTML = '<p>Errore nel caricamento del gioco. Ricarica la pagina.</p>';
+                    }
+                }
+            });
+        }
     }
 
     async init(loadSave = false) {
@@ -113,6 +129,9 @@ class RPGGame {
         
         document.getElementById('canvas-container').appendChild(this.renderer.domElement);
         window.addEventListener('resize', () => this.onWindowResize());
+
+        this.mapGroup = new THREE.Group();
+        this.scene.add(this.mapGroup);
     }
 
     setupLights() {
@@ -175,7 +194,15 @@ class RPGGame {
             const gltf = await this.loadGLTF('modelli_3D/Player_1.glb');
             this.player = gltf.scene;
             this.player.scale.set(3, 3, 3);
-            this.player.position.set(0, 0.1, 0);
+            const boundingBox = new THREE.Box3().setFromObject(this.player);
+            let baseHeight = -boundingBox.min.y;
+            if (!Number.isFinite(baseHeight) || Math.abs(baseHeight) < 0.001) {
+                baseHeight = this.playerBaseHeight;
+            }
+            this.playerBaseHeight = baseHeight;
+            this.player.userData.baseHeight = baseHeight;
+            this.player.userData.walkCycle = 0;
+            this.player.position.set(0, baseHeight, 0);
             
             this.player.traverse((child) => {
                 if (child.isMesh) {
@@ -191,7 +218,46 @@ class RPGGame {
         }
     }
 
+    clearCurrentMap() {
+        if (!this.mapGroup) return;
+
+        const objects = [...this.mapGroup.children];
+        objects.forEach(obj => {
+            this.mapGroup.remove(obj);
+        });
+
+        this.buildings = {};
+        this.wildMonsters = [];
+        this.npcs = {};
+        this.getGroundHeight = () => 0;
+    }
+
+    addToCurrentMap(object3d) {
+        if (!object3d) return object3d;
+        this.mapGroup.add(object3d);
+        return object3d;
+    }
+
+    setGroundHeightFunction(fn) {
+        this.getGroundHeight = typeof fn === 'function' ? fn : () => 0;
+    }
+
+    placeEntityOnGround(entity, x, z, extraHeight = 0) {
+        if (!entity) return;
+        const baseHeight = entity.userData?.baseHeight ?? this.playerBaseHeight;
+        const groundHeight = this.getGroundHeight ? this.getGroundHeight(x, z) : 0;
+        entity.position.set(x, groundHeight + baseHeight + extraHeight, z);
+    }
+
     async createVillageMap() {
+        this.clearCurrentMap();
+
+        const villageHeightFn = (x, z) => {
+            return Math.sin(x * 0.1) * 0.3 + Math.cos(z * 0.1) * 0.3;
+        };
+        this.setGroundHeightFunction(villageHeightFn);
+        this.mapBounds = { minX: -48, maxX: 48, minZ: -48, maxZ: 48 };
+
         // Ground with detailed grass texture
         const groundGeometry = new THREE.PlaneGeometry(100, 100, 50, 50);
         const vertices = groundGeometry.attributes.position.array;
@@ -200,7 +266,7 @@ class RPGGame {
         for (let i = 0; i < vertices.length; i += 3) {
             const x = vertices[i];
             const z = vertices[i + 1];
-            vertices[i + 2] = Math.sin(x * 0.1) * 0.3 + Math.cos(z * 0.1) * 0.3;
+            vertices[i + 2] = villageHeightFn(x, z);
         }
         groundGeometry.attributes.position.needsUpdate = true;
         groundGeometry.computeVertexNormals();
@@ -214,7 +280,7 @@ class RPGGame {
         const ground = new THREE.Mesh(groundGeometry, groundMaterial);
         ground.rotation.x = -Math.PI / 2;
         ground.receiveShadow = true;
-        this.scene.add(ground);
+        this.addToCurrentMap(ground);
 
         // Create paths with better appearance
         this.createPath(0, 0, 6, 50, 0xa89968); // Main path vertical (wider)
@@ -241,87 +307,131 @@ class RPGGame {
     }
 
     async createWildMap() {
-        // Clear current scene except player and lights
-        const objectsToRemove = [];
-        this.scene.children.forEach(child => {
-            if (child !== this.player && !child.isLight && child.type !== 'AmbientLight' && child.type !== 'DirectionalLight') {
-                objectsToRemove.push(child);
-            }
-        });
-        objectsToRemove.forEach(obj => this.scene.remove(obj));
-        this.buildings = {};
-        this.wildMonsters = [];
-        this.npcs = {};
+        this.clearCurrentMap();
 
-        // Create wild terrain with more detail
-        const groundGeometry = new THREE.PlaneGeometry(100, 100, 60, 60);
-        const vertices = groundGeometry.attributes.position.array;
-        
-        // More natural terrain with Perlin-like noise
-        for (let i = 0; i < vertices.length; i += 3) {
-            const x = vertices[i];
-            const z = vertices[i + 1];
-            vertices[i + 2] = 
-                Math.sin(x * 0.1) * 1.5 + 
-                Math.cos(z * 0.1) * 1.5 +
-                Math.sin(x * 0.3) * 0.5 +
-                Math.cos(z * 0.3) * 0.5 +
-                Math.random() * 0.8;
-        }
-        groundGeometry.attributes.position.needsUpdate = true;
-        groundGeometry.computeVertexNormals();
-        
-        const groundMaterial = new THREE.MeshStandardMaterial({
+        const chunkSize = 120;
+        const gridX = 3;
+        const gridZ = 5;
+        const startX = -Math.floor(gridX / 2);
+        const startZ = -Math.floor(gridZ / 2);
+
+        const heightFn = (x, z) => {
+            const seed = this.wildNoiseSeed;
+            const base = Math.sin((x + seed) * 0.015) * 3 + Math.cos((z - seed) * 0.015) * 2.4;
+            const ridges = Math.sin((x + z + seed * 0.5) * 0.01) * 2.6;
+            const detail = Math.sin((x - z - seed) * 0.045) * 1.3;
+            return (base + ridges + detail) * 0.6;
+        };
+
+        this.setGroundHeightFunction(heightFn);
+
+        const terrainMaterial = new THREE.MeshStandardMaterial({
             color: 0x3a8c3a,
-            roughness: 0.95,
+            roughness: 0.94,
             metalness: 0.05
         });
-        
-        const ground = new THREE.Mesh(groundGeometry, groundMaterial);
-        ground.rotation.x = -Math.PI / 2;
-        ground.receiveShadow = true;
-        this.scene.add(ground);
+
+        const maxHalfWidth = (gridX * chunkSize) / 2;
+        const maxHalfDepth = (gridZ * chunkSize) / 2;
+
+        for (let gx = 0; gx < gridX; gx++) {
+            for (let gz = 0; gz < gridZ; gz++) {
+                const geometry = new THREE.PlaneGeometry(chunkSize, chunkSize, 48, 48);
+                const vertices = geometry.attributes.position.array;
+                const offsetX = (startX + gx) * chunkSize;
+                const offsetZ = (startZ + gz) * chunkSize;
+
+                for (let i = 0; i < vertices.length; i += 3) {
+                    const localX = vertices[i];
+                    const localZ = vertices[i + 1];
+                    const worldX = localX + offsetX;
+                    const worldZ = localZ + offsetZ;
+                    vertices[i + 2] = heightFn(worldX, worldZ);
+                }
+
+                geometry.attributes.position.needsUpdate = true;
+                geometry.computeVertexNormals();
+
+                const terrainChunk = new THREE.Mesh(geometry, terrainMaterial);
+                terrainChunk.rotation.x = -Math.PI / 2;
+                terrainChunk.receiveShadow = true;
+                terrainChunk.position.set(offsetX, 0, offsetZ);
+                this.addToCurrentMap(terrainChunk);
+            }
+        }
+
+        this.createWildBackdrop(Math.max(maxHalfWidth, maxHalfDepth) + 120);
+
+        const padding = 35;
+        this.mapBounds = {
+            minX: -maxHalfWidth + padding,
+            maxX: maxHalfWidth - padding,
+            minZ: -maxHalfDepth + padding,
+            maxZ: maxHalfDepth - padding
+        };
 
         // Spawn wild monsters
         await this.spawnWildMonsters();
         
         // Add NPC Trainer in wild area
-        this.createNPCTrainer('trainer3', 0, 0, -30, 0x00ff00);
+        this.createNPCTrainer('trainer3', 0, 0, -(chunkSize * (gridZ / 2 - 0.5)), 0x00ff00);
         
-        // Add nature elements
-        this.createTrees(true);
-        this.createRocks();
-        this.createBushes();
+        // Add nature elements across the expanded map
+        const scatterXRange = [this.mapBounds.minX + 10, this.mapBounds.maxX - 10];
+        const scatterZRange = [this.mapBounds.minZ + 10, this.mapBounds.maxZ - 10];
+        this.createTrees({ count: 70, xRange: scatterXRange, zRange: scatterZRange, clearRadius: 20 });
+        this.createRocks({ count: 45, xRange: scatterXRange, zRange: scatterZRange });
+        this.createBushes({ count: 60, xRange: scatterXRange, zRange: scatterZRange });
 
         console.log('✓ Zona selvaggia creata');
     }
 
     async spawnWildMonsters() {
-        const monsterFiles = [
-            'Blue_Puffball_3D.glb',
-            'Gnugnu_3D.glb',
-            'Lotus_3D.glb',
-            'Blossom_3D.glb',
-            'LavaFlare.glb',
-            'Pyrolynx.glb'
+        const monsterConfigs = [
+            { file: 'Blue_Puffball_3D.glb', scale: 1.9, speed: 0.8 },
+            { file: 'Gnugnu_3D.glb', scale: 2.4, speed: 1.1 },
+            { file: 'Lotus_3D.glb', scale: 2.1, speed: 0.7 },
+            { file: 'Blossom_3D.glb', scale: 2.1, speed: 0.9 },
+            { file: 'LavaFlare.glb', scale: 1.6, speed: 1.3 },
+            { file: 'Pyrolynx.glb', scale: 1.8, speed: 1.4 }
         ];
 
-        const positions = [
-            { x: -20, z: -20 },
-            { x: 20, z: -20 },
-            { x: -20, z: 20 },
-            { x: 20, z: 20 },
-            { x: -10, z: 10 },
-            { x: 10, z: -10 }
-        ];
+        const spawnArea = {
+            minX: this.mapBounds.minX + 15,
+            maxX: this.mapBounds.maxX - 15,
+            minZ: this.mapBounds.minZ + 15,
+            maxZ: this.mapBounds.maxZ - 15
+        };
 
-        for (let i = 0; i < monsterFiles.length; i++) {
+        const usedPositions = [];
+        const minDistance = 35;
+
+        const pickSpawnPoint = () => {
+            for (let attempts = 0; attempts < 25; attempts++) {
+                const x = THREE.MathUtils.randFloat(spawnArea.minX, spawnArea.maxX);
+                const z = THREE.MathUtils.randFloat(spawnArea.minZ, spawnArea.maxZ);
+                const isFarEnough = usedPositions.every(pos => {
+                    const dx = pos.x - x;
+                    const dz = pos.z - z;
+                    return Math.sqrt(dx * dx + dz * dz) > minDistance;
+                });
+                if (isFarEnough) {
+                    return { x, z };
+                }
+            }
+            // Fallback if too crowded
+            return {
+                x: THREE.MathUtils.randFloat(spawnArea.minX, spawnArea.maxX),
+                z: THREE.MathUtils.randFloat(spawnArea.minZ, spawnArea.maxZ)
+            };
+        };
+
+        for (const config of monsterConfigs) {
             try {
-                const gltf = await this.loadGLTF(`modelli_3D/${monsterFiles[i]}`);
+                const gltf = await this.loadGLTF(`modelli_3D/${config.file}`);
                 const monster = gltf.scene;
-                monster.scale.set(3, 3, 3);
-                monster.position.set(positions[i].x, 1.5, positions[i].z);
-                
+                monster.scale.setScalar(config.scale);
+
                 monster.traverse((child) => {
                     if (child.isMesh) {
                         child.castShadow = true;
@@ -329,14 +439,28 @@ class RPGGame {
                     }
                 });
 
+                const boundingBox = new THREE.Box3().setFromObject(monster);
+                let baseHeight = -boundingBox.min.y;
+                if (!Number.isFinite(baseHeight) || baseHeight < 0.05) {
+                    baseHeight = 0.6;
+                }
+                monster.userData.baseHeight = baseHeight;
+
+                const spawnPoint = pickSpawnPoint();
+                usedPositions.push(spawnPoint);
+                this.placeEntityOnGround(monster, spawnPoint.x, spawnPoint.z);
+
                 monster.userData.type = 'wild-monster';
-                monster.userData.name = monsterFiles[i].replace('_3D.glb', '').replace('.glb', '');
+                monster.userData.name = config.file.replace('_3D.glb', '').replace('.glb', '');
                 monster.userData.idlePhase = Math.random() * Math.PI * 2;
-                
-                this.scene.add(monster);
+                monster.userData.wanderDirection = new THREE.Vector3(Math.random() - 0.5, 0, Math.random() - 0.5).normalize();
+                monster.userData.wanderSpeed = config.speed;
+                monster.userData.changeTimer = THREE.MathUtils.randFloat(4, 8);
+
+                this.addToCurrentMap(monster);
                 this.wildMonsters.push(monster);
             } catch (error) {
-                console.error(`Errore caricamento mostro ${monsterFiles[i]}:`, error);
+                console.error(`Errore caricamento mostro ${config.file}:`, error);
             }
         }
     }
@@ -359,7 +483,7 @@ class RPGGame {
             building.userData.id = id;
             building.userData.interactable = true;
             
-            this.scene.add(building);
+            this.addToCurrentMap(building);
             this.buildings[id] = building;
             console.log(`✓ ${id} caricato`);
         } catch (error) {
@@ -425,7 +549,7 @@ class RPGGame {
         houseGroup.userData.id = 'house';
         houseGroup.userData.interactable = true;
         
-        this.scene.add(houseGroup);
+        this.addToCurrentMap(houseGroup);
     }
 
     createPath(x, z, width, length, color) {
@@ -438,7 +562,7 @@ class RPGGame {
         path.rotation.x = -Math.PI / 2;
         path.position.set(x, 0.05, z);
         path.receiveShadow = true;
-        this.scene.add(path);
+        this.addToCurrentMap(path);
     }
 
     createNPCTrainer(npcId, x, y, z, color) {
@@ -477,27 +601,60 @@ class RPGGame {
         mark.position.y = 5.5;
         npcGroup.add(mark);
         
-        npcGroup.position.set(x, y + 2.3, z);
+        const groundHeight = this.getGroundHeight ? this.getGroundHeight(x, z) : 0;
+        npcGroup.position.set(x, groundHeight + 2.3 + y, z);
         npcGroup.userData.type = 'npc-trainer';
         npcGroup.userData.id = npcId;
         npcGroup.userData.interactable = true;
         npcGroup.userData.npcData = NPCS[npcId];
         
-        this.scene.add(npcGroup);
+        this.addToCurrentMap(npcGroup);
         this.npcs[npcId] = npcGroup;
         
         console.log(`✓ NPC ${npcId} creato`);
     }
 
-    createTrees(dense = false) {
-        const count = dense ? 25 : 12;
-        const spread = dense ? 40 : 38;
-        
+    createTrees(config = {}) {
+        let options = {};
+        if (typeof config === 'boolean') {
+            options = config
+                ? { count: 40, minRadius: 45, maxRadius: 220, clearRadius: 20 }
+                : { count: 18, minRadius: 25, maxRadius: 70, clearRadius: 12 };
+        } else {
+            options = config;
+        }
+
+        const {
+            count = 18,
+            minRadius = 25,
+            maxRadius = 70,
+            clearRadius = 12,
+            xRange = null,
+            zRange = null
+        } = options;
+
         for (let i = 0; i < count; i++) {
-            const angle = (i / count) * Math.PI * 2;
-            const radius = spread + Math.random() * 10;
-            const x = Math.cos(angle) * radius;
-            const z = Math.sin(angle) * radius;
+            let x;
+            let z;
+
+            if (Array.isArray(xRange) && Array.isArray(zRange)) {
+                x = THREE.MathUtils.randFloat(xRange[0], xRange[1]);
+                z = THREE.MathUtils.randFloat(zRange[0], zRange[1]);
+                if (Math.sqrt(x * x + z * z) < clearRadius) {
+                    i--;
+                    continue;
+                }
+            } else {
+                const angle = Math.random() * Math.PI * 2;
+                const radius = THREE.MathUtils.randFloat(minRadius, maxRadius);
+                x = Math.cos(angle) * radius;
+                z = Math.sin(angle) * radius;
+
+                if (Math.sqrt(x * x + z * z) < clearRadius) {
+                    i--;
+                    continue;
+                }
+            }
             const treeGroup = new THREE.Group();
 
             // Trunk - more realistic proportions
@@ -513,7 +670,7 @@ class RPGGame {
             treeGroup.add(trunk);
 
             // Multi-layer foliage for more realistic tree
-            const foliageColor = dense ? 0x2d5016 : 0x3a7f2d;
+            const foliageColor = maxRadius > 100 ? 0x2d5016 : 0x3a7f2d;
             
             // Bottom layer
             const foliage1 = new THREE.Mesh(
@@ -551,8 +708,9 @@ class RPGGame {
             foliage3.castShadow = true;
             treeGroup.add(foliage3);
             
-            treeGroup.position.set(x, 0.1, z);
-            this.scene.add(treeGroup);
+            const groundHeight = this.getGroundHeight ? this.getGroundHeight(x, z) : 0;
+            treeGroup.position.set(x, groundHeight + 0.1, z);
+            this.addToCurrentMap(treeGroup);
         }
     }
 
@@ -573,7 +731,7 @@ class RPGGame {
                 post.position.set(pos.x, 1.6, pos.z + i - pos.length / 2);
                 post.castShadow = true;
                 post.receiveShadow = true;
-                this.scene.add(post);
+                this.addToCurrentMap(post);
                 
                 // Horizontal rail
                 if (i < pos.length - 2) {
@@ -581,14 +739,26 @@ class RPGGame {
                     const rail = new THREE.Mesh(railGeometry, postMaterial);
                     rail.position.set(pos.x, 2, pos.z + i - pos.length / 2 + 1);
                     rail.castShadow = true;
-                    this.scene.add(rail);
+                    this.addToCurrentMap(rail);
                 }
             }
         });
     }
 
-    createRocks() {
-        for (let i = 0; i < 20; i++) {
+    createRocks(config = {}) {
+        const options = typeof config === 'number'
+            ? { count: config }
+            : config;
+
+        const {
+            count = 20,
+            minRadius = 25,
+            maxRadius = 80,
+            xRange = null,
+            zRange = null
+        } = options;
+
+        for (let i = 0; i < count; i++) {
             const size = Math.random() * 2.5 + 1;
             const geometry = new THREE.DodecahedronGeometry(size, 1);
             const grayVariation = Math.floor(Math.random() * 30) + 100;
@@ -600,12 +770,23 @@ class RPGGame {
             });
             const rock = new THREE.Mesh(geometry, material);
             
-            const angle = Math.random() * Math.PI * 2;
-            const radius = 25 + Math.random() * 15;
+            let x;
+            let z;
+
+            if (Array.isArray(xRange) && Array.isArray(zRange)) {
+                x = THREE.MathUtils.randFloat(xRange[0], xRange[1]);
+                z = THREE.MathUtils.randFloat(zRange[0], zRange[1]);
+            } else {
+                const angle = Math.random() * Math.PI * 2;
+                const radius = THREE.MathUtils.randFloat(minRadius, maxRadius);
+                x = Math.cos(angle) * radius;
+                z = Math.sin(angle) * radius;
+            }
+            const groundHeight = this.getGroundHeight ? this.getGroundHeight(x, z) : 0;
             rock.position.set(
-                Math.cos(angle) * radius,
-                size / 2 + 0.1,
-                Math.sin(angle) * radius
+                x,
+                groundHeight + size / 2,
+                z
             );
             rock.rotation.set(
                 Math.random() * Math.PI,
@@ -614,12 +795,24 @@ class RPGGame {
             );
             rock.castShadow = true;
             rock.receiveShadow = true;
-            this.scene.add(rock);
+            this.addToCurrentMap(rock);
         }
     }
 
-    createBushes() {
-        for (let i = 0; i < 15; i++) {
+    createBushes(config = {}) {
+        const options = typeof config === 'number'
+            ? { count: config }
+            : config;
+
+        const {
+            count = 15,
+            minRadius = 20,
+            maxRadius = 80,
+            xRange = null,
+            zRange = null
+        } = options;
+
+        for (let i = 0; i < count; i++) {
             const bushGroup = new THREE.Group();
             
             // Multi-sphere bushes for more natural look
@@ -642,15 +835,66 @@ class RPGGame {
                 bushGroup.add(sphere);
             }
             
-            const angle = Math.random() * Math.PI * 2;
-            const radius = 20 + Math.random() * 20;
+            let x;
+            let z;
+
+            if (Array.isArray(xRange) && Array.isArray(zRange)) {
+                x = THREE.MathUtils.randFloat(xRange[0], xRange[1]);
+                z = THREE.MathUtils.randFloat(zRange[0], zRange[1]);
+            } else {
+                const angle = Math.random() * Math.PI * 2;
+                const radius = THREE.MathUtils.randFloat(minRadius, maxRadius);
+                x = Math.cos(angle) * radius;
+                z = Math.sin(angle) * radius;
+            }
+            const groundHeight = this.getGroundHeight ? this.getGroundHeight(x, z) : 0;
             bushGroup.position.set(
-                Math.cos(angle) * radius,
-                0.6,
-                Math.sin(angle) * radius
+                x,
+                groundHeight + 0.6,
+                z
             );
-            this.scene.add(bushGroup);
+            this.addToCurrentMap(bushGroup);
         }
+    }
+
+    createWildBackdrop(radius) {
+        const floorRadius = radius * 1.5;
+
+        const outerGround = new THREE.Mesh(
+            new THREE.CircleGeometry(floorRadius, 64),
+            new THREE.MeshStandardMaterial({
+                color: 0x2d4f23,
+                roughness: 1,
+                side: THREE.DoubleSide
+            })
+        );
+        outerGround.rotation.x = -Math.PI / 2;
+        outerGround.position.y = -4;
+        this.addToCurrentMap(outerGround);
+
+        const cliffWall = new THREE.Mesh(
+            new THREE.CylinderGeometry(radius * 1.45, radius * 1.6, 70, 48, 1, true),
+            new THREE.MeshStandardMaterial({
+                color: 0x354724,
+                roughness: 1,
+                side: THREE.BackSide
+            })
+        );
+        cliffWall.position.y = 31;
+        cliffWall.rotation.y = Math.random() * Math.PI;
+        cliffWall.receiveShadow = false;
+        this.addToCurrentMap(cliffWall);
+
+        const mountainRidge = new THREE.Mesh(
+            new THREE.CylinderGeometry(radius * 1.2, radius * 1.45, 40, 48, 1, false),
+            new THREE.MeshStandardMaterial({
+                color: 0x506131,
+                roughness: 0.95
+            })
+        );
+        mountainRidge.position.y = 66;
+        mountainRidge.receiveShadow = false;
+        this.addToCurrentMap(mountainRidge);
     }
 
     loadGLTF(path) {
@@ -705,14 +949,31 @@ class RPGGame {
                 this.player.rotation.y = targetRotation;
             }
 
-            // Simple walking animation
-            const bobAmount = Math.sin(Date.now() * 0.01) * 0.1;
-            this.player.position.y = bobAmount;
+            // Simple walking animation tied to delta time
+            const walkCycle = (this.player.userData.walkCycle ?? 0) + deltaTime * 8;
+            this.player.userData.walkCycle = walkCycle;
+            const bobAmount = Math.sin(walkCycle) * 0.15;
+            const baseHeight = this.player.userData.baseHeight ?? this.playerBaseHeight;
+            const groundHeight = this.getGroundHeight ? this.getGroundHeight(this.player.position.x, this.player.position.z) : 0;
+            this.player.position.y = groundHeight + baseHeight + bobAmount;
+        } else {
+            this.player.userData.walkCycle = (this.player.userData.walkCycle ?? 0) * 0.92;
         }
 
         // Keep player in bounds
-        this.player.position.x = Math.max(-45, Math.min(45, this.player.position.x));
-        this.player.position.z = Math.max(-45, Math.min(45, this.player.position.z));
+        this.player.position.x = THREE.MathUtils.clamp(this.player.position.x, this.mapBounds.minX, this.mapBounds.maxX);
+        this.player.position.z = THREE.MathUtils.clamp(this.player.position.z, this.mapBounds.minZ, this.mapBounds.maxZ);
+
+        if (moved) {
+            const baseHeight = this.player.userData.baseHeight ?? this.playerBaseHeight;
+            const groundHeight = this.getGroundHeight ? this.getGroundHeight(this.player.position.x, this.player.position.z) : 0;
+            const bobAmount = Math.sin(this.player.userData.walkCycle ?? 0) * 0.15;
+            this.player.position.y = groundHeight + baseHeight + bobAmount;
+        } else {
+            const baseHeight = this.player.userData.baseHeight ?? this.playerBaseHeight;
+            const groundHeight = this.getGroundHeight ? this.getGroundHeight(this.player.position.x, this.player.position.z) : 0;
+            this.player.position.y = THREE.MathUtils.lerp(this.player.position.y, groundHeight + baseHeight, 0.15);
+        }
 
         // Camera follow player
         const cameraOffset = new THREE.Vector3(0, 20, 25);
@@ -1245,7 +1506,8 @@ class RPGGame {
             await this.createVillageMap();
         }
         
-        this.player.position.set(0, 0, 0);
+        this.placeEntityOnGround(this.player, 0, 0);
+        this.controls.target.copy(this.player.position);
         document.getElementById('loading').classList.add('hidden');
     }
 
@@ -1253,12 +1515,42 @@ class RPGGame {
         if (this.currentMap !== 'wild') return;
 
         this.wildMonsters.forEach(monster => {
-            // Idle bobbing animation
-            monster.userData.idlePhase += deltaTime * 2;
-            monster.position.y = 1 + Math.sin(monster.userData.idlePhase) * 0.2;
-            
-            // Slow rotation
-            monster.rotation.y += deltaTime * 0.5;
+            const data = monster.userData;
+            data.changeTimer -= deltaTime;
+            if (data.changeTimer <= 0) {
+                data.wanderDirection = new THREE.Vector3(
+                    Math.random() - 0.5,
+                    0,
+                    Math.random() - 0.5
+                ).normalize();
+                data.changeTimer = THREE.MathUtils.randFloat(4, 8);
+            }
+
+            const moveSpeed = (data.wanderSpeed ?? 1) * 1.8;
+            monster.position.x += data.wanderDirection.x * moveSpeed * deltaTime;
+            monster.position.z += data.wanderDirection.z * moveSpeed * deltaTime;
+
+            const margin = 20;
+            const bounds = this.mapBounds;
+
+            if (monster.position.x < bounds.minX + margin || monster.position.x > bounds.maxX - margin) {
+                monster.position.x = THREE.MathUtils.clamp(monster.position.x, bounds.minX + margin, bounds.maxX - margin);
+                data.wanderDirection.x *= -1;
+            }
+
+            if (monster.position.z < bounds.minZ + margin || monster.position.z > bounds.maxZ - margin) {
+                monster.position.z = THREE.MathUtils.clamp(monster.position.z, bounds.minZ + margin, bounds.maxZ - margin);
+                data.wanderDirection.z *= -1;
+            }
+
+            const groundHeight = this.getGroundHeight ? this.getGroundHeight(monster.position.x, monster.position.z) : 0;
+            data.idlePhase += deltaTime * 2;
+            const bob = Math.sin(data.idlePhase) * 0.25;
+            const baseHeight = data.baseHeight ?? 0.6;
+            monster.position.y = groundHeight + baseHeight + bob;
+
+            const targetRotation = Math.atan2(data.wanderDirection.x, data.wanderDirection.z);
+            monster.rotation.y = THREE.MathUtils.lerp(monster.rotation.y, targetRotation, 0.08);
         });
     }
 
@@ -1338,6 +1630,7 @@ class RPGGame {
     }
 }
 
-// Initialize game
-const rpgGame = new RPGGame();
-window.rpgGame = rpgGame;
+export const rpgGameInstance = typeof window !== 'undefined' ? new RPGGame() : null;
+if (typeof window !== 'undefined') {
+    window.rpgGame = rpgGameInstance;
+}

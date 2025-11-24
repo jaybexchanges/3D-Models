@@ -6,7 +6,8 @@
   "type": "module",
   "scripts": {
     "start": "python3 -m http.server 8000",
-    "dev": "python3 -m http.server 8000"
+    "dev": "python3 -m http.server 8000",
+    "test": "node test-moves-system.js && node test-capture-system.js && node test-geometry-system.js"
   },
   "keywords": [
     "3D",
@@ -19,5 +20,8 @@
   "license": "MIT",
   "dependencies": {
     "three": "^0.169.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
   }
 }
