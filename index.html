@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Alpine Journey - Avventura Pokémon</title>
+    <title>Swissmon - Avventura Pokémon</title>
     <style>
         body, html {
             margin: 0;
@@ -30,8 +30,9 @@
             width: 100%;
             height: 100%;
             background-image: url('modelli_3D/background.jpeg');
-            background-size: cover;
+            background-size: contain;
             background-position: center;
+            background-repeat: no-repeat;
             z-index: 1;
         }
 
@@ -47,8 +48,9 @@
             
             /* Cloniamo lo sfondo */
             background-image: url('modelli_3D/background.jpeg');
-            background-size: cover;
+            background-size: contain;
             background-position: center 40%;
+            background-repeat: no-repeat;
             
             /* Applichiamo il filtro SVG */
             filter: url('#turbulence-filter');
@@ -113,41 +115,6 @@
             }
         }
 
-        /* --- EFFETTO UCCELLI --- */
-        .birds {
-            position: absolute;
-            top: 15%;
-            left: 0;
-            width: 100%;
-            height: 30%;
-            z-index: 3;
-            pointer-events: none;
-        }
-
-        .bird {
-            position: absolute;
-            font-size: 20px;
-            animation: flyBird linear infinite;
-            opacity: 0;
-        }
-
-        @keyframes flyBird {
-            0% { 
-                transform: translateX(-100px) translateY(0);
-                opacity: 0;
-            }
-            10% { opacity: 0.6; }
-            50% { 
-                transform: translateX(50vw) translateY(-20px);
-                opacity: 0.8;
-            }
-            90% { opacity: 0.6; }
-            100% { 
-                transform: translateX(100vw) translateY(0);
-                opacity: 0;
-            }
-        }
-
         /* --- UI / INTERFACCIA --- */
         .ui-layer {
             position: absolute;
@@ -156,21 +123,22 @@
             height: 100%;
             display: flex;
             flex-direction: column;
-            justify-content: center;
+            justify-content: flex-start;
             align-items: center;
+            padding-top: 50px;
             background: radial-gradient(circle at center, transparent 40%, rgba(0,0,0,0.3) 100%);
         }
 
         h1 {
             color: #fff;
-            font-size: 5rem;
+            font-size: 4.5rem;
             text-transform: uppercase;
             text-shadow: 
                 0 0 10px rgba(59, 76, 202, 0.8),
                 0 0 20px rgba(59, 76, 202, 0.6),
                 0 4px 15px rgba(0,0,0,0.9),
                 0 8px 25px rgba(0,0,0,0.7);
-            margin-bottom: 30px;
+            margin-bottom: 20px;
             letter-spacing: 8px;
             font-weight: 900;
             -webkit-text-stroke: 3px #3b4cca;
@@ -195,17 +163,17 @@
 
         .subtitle {
             color: #fff;
-            font-size: 1.5rem;
+            font-size: 1.3rem;
             text-shadow: 0 2px 8px rgba(0,0,0,0.8);
-            margin-bottom: 40px;
+            margin-bottom: 30px;
             letter-spacing: 3px;
             font-weight: 600;
             opacity: 0.9;
         }
 
         .start-btn {
-            padding: 20px 50px;
-            font-size: 1.8rem;
+            padding: 18px 45px;
+            font-size: 1.6rem;
             color: white;
             background: linear-gradient(45deg, #ff0000, #cc0000);
             border: 5px solid white;
@@ -248,32 +216,6 @@
 
         .start-btn:active {
             transform: scale(1.05);
-        }
-
-        /* Effetto sparkle sul bottone */
-        .start-btn::before {
-            content: '✨';
-            position: absolute;
-            left: -30px;
-            animation: sparkle 1.5s ease-in-out infinite;
-        }
-
-        .start-btn::after {
-            content: '✨';
-            position: absolute;
-            right: -30px;
-            animation: sparkle 1.5s ease-in-out infinite 0.75s;
-        }
-
-        @keyframes sparkle {
-            0%, 100% { 
-                opacity: 0.3;
-                transform: scale(0.8);
-            }
-            50% { 
-                opacity: 1;
-                transform: scale(1.2);
-            }
         }
 
         /* Info box in basso */
@@ -334,16 +276,13 @@
         <!-- Nuvole che scorrono -->
         <div class="clouds"></div>
 
-        <!-- Uccelli che volano -->
-        <div class="birds" id="birds"></div>
-
         <!-- Particelle di Vento -->
         <div class="wind-particles" id="wind"></div>
 
         <!-- Interfaccia Utente -->
         <div class="ui-layer">
-            <h1>Alpine Journey</h1>
-            <div class="subtitle">🏔️ Inizia la tua avventura Pokémon! 🏔️</div>
+            <h1>Swissmon</h1>
+            <div class="subtitle">Inizia la tua avventura Pokémon!</div>
             <a href="rpg.html" class="start-btn">Inizia Avventura</a>
         </div>
 
@@ -382,37 +321,6 @@
 
         // Crea una particella ogni 400ms
         setInterval(createLeaf, 400);
-
-        // Script per generare uccelli che volano
-        const birdsContainer = document.getElementById('birds');
-        const birdSymbols = ['🦅', '🦆', '🕊️'];
-
-        function createBird() {
-            const bird = document.createElement('div');
-            bird.classList.add('bird');
-            bird.textContent = birdSymbols[Math.floor(Math.random() * birdSymbols.length)];
-            
-            const startY = Math.random() * 60;
-            const duration = Math.random() * 15 + 20;
-            const delay = Math.random() * 10;
-
-            bird.style.top = `${startY}%`;
-            bird.style.animationDuration = `${duration}s`;
-            bird.style.animationDelay = `${delay}s`;
-
-            birdsContainer.appendChild(bird);
-
-            setTimeout(() => {
-                bird.remove();
-                // Crea un nuovo uccello dopo che questo è scomparso
-                setTimeout(createBird, Math.random() * 10000);
-            }, (duration + delay) * 1000);
-        }
-
-        // Crea 3 uccelli iniziali
-        for (let i = 0; i < 3; i++) {
-            setTimeout(createBird, i * 8000);
-        }
 
         // Animazione JS aggiuntiva per l'acqua (opzionale, migliora l'effetto SVG)
         const turb = document.querySelector('filter#turbulence-filter feTurbulence');
