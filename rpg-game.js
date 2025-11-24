@@ -646,8 +646,7 @@ class RPGGame {
         const level = 3 + Math.floor(Math.random() * 5); // Random level 3-7
         this.currentBattleEnemyMonster = new Monster(speciesKey, level);
         
-        // Hide old battle UI, show new one
-        document.getElementById('battle-screen').classList.remove('active');
+        // Show battle UI
         document.getElementById('battle-ui').classList.remove('hidden');
         
         this.uiManager.clearBattleLog();
@@ -961,7 +960,6 @@ class RPGGame {
         this.trainerTeamIndex = 0;
         
         document.getElementById('battle-ui').classList.add('hidden');
-        document.getElementById('battle-screen').classList.remove('active');
         
         this.uiManager.updateAllDisplays();
     }
