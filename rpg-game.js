@@ -48,7 +48,7 @@ class RPGGame {
 
     showLandingPage() {
         // Check if there's a saved game
-        const hasSavedGame = localStorage.getItem('monsterquest_save') !== null;
+        const hasSavedGame = localStorage.getItem('swissmon_save') !== null;
         
         const continueBtn = document.getElementById('continue-btn');
         const newGameBtn = document.getElementById('new-game-btn');
@@ -108,7 +108,7 @@ class RPGGame {
             }
         } else {
             // New game - clear any existing save
-            localStorage.removeItem('monsterquest_save');
+            localStorage.removeItem('swissmon_save');
             // Add GnuGnu as starter monster
             this.addStarterMonster();
         }
