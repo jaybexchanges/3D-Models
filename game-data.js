@@ -451,6 +451,9 @@ export class Monster {
         this.exp = 0;
         this.expToNextLevel = this.calculateExpNeeded(level);
         
+        // Status condition (none, paralyzed, asleep, poisoned, burned, frozen)
+        this.status = 'none';
+        
         // Initialize moves
         this.moves = [];
         this.learnAvailableMoves();
@@ -615,7 +618,8 @@ export class Monster {
             speed: this.speed,
             exp: this.exp,
             expToNextLevel: this.expToNextLevel,
-            moves: this.moves
+            moves: this.moves,
+            status: this.status
         };
     }
     
@@ -623,6 +627,7 @@ export class Monster {
         const monster = new Monster(data.species, data.level, data.nature);
         monster.currentHP = data.currentHP;
         monster.exp = data.exp;
+        monster.status = data.status || 'none';
         if (data.moves) {
             monster.moves = data.moves;
         }

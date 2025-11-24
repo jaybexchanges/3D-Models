@@ -924,13 +924,51 @@ class RPGGame {
         const enemyMonster = this.currentBattleEnemyMonster;
         const speciesData = MONSTER_SPECIES[enemyMonster.species];
         
-        // Calculate catch chance
-        const hpFactor = (enemyMonster.maxHP - enemyMonster.currentHP) / enemyMonster.maxHP;
-        const catchChance = speciesData.catchRate * item.catchBonus * (1 + hpFactor * 0.5);
+        // Enhanced capture algorithm
+        // Base catch rate from species (0.0 to 1.0)
+        let catchRate = speciesData.catchRate;
+        
+        // HP Factor: Lower HP increases catch rate significantly
+        // Full HP = 1.0x, Half HP = 1.5x, Low HP (< 25%) = 2.0x
+        const hpPercent = enemyMonster.currentHP / enemyMonster.maxHP;
+        let hpModifier = 1.0;
+        if (hpPercent <= 0.25) {
+            hpModifier = 2.0; // Very low HP: 2x easier
+        } else if (hpPercent <= 0.5) {
+            hpModifier = 1.5; // Half HP: 1.5x easier
+        } else {
+            hpModifier = 1.0 + (1.0 - hpPercent) * 0.5; // Gradual increase as HP drops
+        }
+        
+        // Level Factor: Higher level = slightly harder to catch
+        // Level 5 = 1.0x, Level 10 = 0.95x, Level 20 = 0.85x, Level 50 = 0.65x
+        const levelModifier = Math.max(0.5, 1.0 - (enemyMonster.level - 5) * 0.01);
+        
+        // Status Condition Bonuses
+        let statusBonus = 0;
+        if (enemyMonster.status === 'paralyzed') {
+            statusBonus = 0.15; // +15% for paralyzed
+        } else if (enemyMonster.status === 'asleep') {
+            statusBonus = 0.20; // +20% for asleep
+        } else if (enemyMonster.status === 'frozen') {
+            statusBonus = 0.20; // +20% for frozen
+        } else if (enemyMonster.status === 'poisoned' || enemyMonster.status === 'burned') {
+            statusBonus = 0.10; // +10% for poisoned/burned
+        }
+        
+        // Poké Ball multiplier (pokeball: 1.0x, greatball: 1.5x, ultraball: 2.0x)
+        const ballModifier = item.catchBonus;
+        
+        // Final catch rate calculation
+        // Formula: baseRate * hpMod * levelMod * ballMod + statusBonus
+        const finalCatchRate = Math.min(0.99, (catchRate * hpModifier * levelModifier * ballModifier) + statusBonus);
         
         this.uiManager.addBattleLog(`Hai lanciato una ${item.name}!`);
         
-        if (Math.random() < catchChance) {
+        // Debug info (can be removed in production)
+        console.log(`Catch attempt: Base=${catchRate.toFixed(2)}, HP=${hpModifier.toFixed(2)}, Level=${levelModifier.toFixed(2)}, Ball=${ballModifier}, Status=+${statusBonus.toFixed(2)}, Final=${(finalCatchRate * 100).toFixed(1)}%`);
+        
+        if (Math.random() < finalCatchRate) {
             this.uiManager.addBattleLog(`Fantastico! Hai catturato ${enemyMonster.name}!`);
             
             // Add to team
