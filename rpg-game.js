@@ -99,30 +99,44 @@ class RPGGame {
         );
         this.camera.position.set(0, 20, 25);
 
-        this.renderer = new THREE.WebGLRenderer({ antialias: true });
+        this.renderer = new THREE.WebGLRenderer({ 
+            antialias: true,
+            powerPreference: 'high-performance'
+        });
         this.renderer.setSize(window.innerWidth, window.innerHeight);
+        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         this.renderer.shadowMap.enabled = true;
         this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        this.renderer.outputEncoding = THREE.sRGBEncoding;
+        this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        this.renderer.toneMappingExposure = 1.0;
         
         document.getElementById('canvas-container').appendChild(this.renderer.domElement);
         window.addEventListener('resize', () => this.onWindowResize());
     }
 
     setupLights() {
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        // Ambient light - slightly warmer
+        const ambientLight = new THREE.AmbientLight(0xfff8e1, 0.5);
         this.scene.add(ambientLight);
 
-        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-        directionalLight.position.set(50, 50, 25);
+        // Main directional light (sun)
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 1.0);
+        directionalLight.position.set(50, 60, 25);
         directionalLight.castShadow = true;
-        directionalLight.shadow.mapSize.width = 2048;
-        directionalLight.shadow.mapSize.height = 2048;
+        directionalLight.shadow.mapSize.width = 4096;
+        directionalLight.shadow.mapSize.height = 4096;
         directionalLight.shadow.camera.far = 200;
-        directionalLight.shadow.camera.left = -50;
-        directionalLight.shadow.camera.right = 50;
-        directionalLight.shadow.camera.top = 50;
-        directionalLight.shadow.camera.bottom = -50;
+        directionalLight.shadow.camera.left = -60;
+        directionalLight.shadow.camera.right = 60;
+        directionalLight.shadow.camera.top = 60;
+        directionalLight.shadow.camera.bottom = -60;
+        directionalLight.shadow.bias = -0.0001;
         this.scene.add(directionalLight);
+        
+        // Hemisphere light for better outdoor lighting
+        const hemisphereLight = new THREE.HemisphereLight(0x87ceeb, 0x8b7355, 0.3);
+        this.scene.add(hemisphereLight);
     }
 
     setupControls() {
@@ -160,8 +174,8 @@ class RPGGame {
         try {
             const gltf = await this.loadGLTF('modelli_3D/Player_1.glb');
             this.player = gltf.scene;
-            this.player.scale.set(2, 2, 2);
-            this.player.position.set(0, 0, 0);
+            this.player.scale.set(3, 3, 3);
+            this.player.position.set(0, 0.1, 0);
             
             this.player.traverse((child) => {
                 if (child.isMesh) {
@@ -178,11 +192,23 @@ class RPGGame {
     }
 
     async createVillageMap() {
-        // Ground
-        const groundGeometry = new THREE.PlaneGeometry(100, 100, 20, 20);
+        // Ground with detailed grass texture
+        const groundGeometry = new THREE.PlaneGeometry(100, 100, 50, 50);
+        const vertices = groundGeometry.attributes.position.array;
+        
+        // Add subtle terrain variation
+        for (let i = 0; i < vertices.length; i += 3) {
+            const x = vertices[i];
+            const z = vertices[i + 1];
+            vertices[i + 2] = Math.sin(x * 0.1) * 0.3 + Math.cos(z * 0.1) * 0.3;
+        }
+        groundGeometry.attributes.position.needsUpdate = true;
+        groundGeometry.computeVertexNormals();
+        
         const groundMaterial = new THREE.MeshStandardMaterial({
-            color: 0x4a7c59,
-            roughness: 0.8
+            color: 0x4a8c4a,
+            roughness: 0.85,
+            metalness: 0.1
         });
         
         const ground = new THREE.Mesh(groundGeometry, groundMaterial);
@@ -190,13 +216,13 @@ class RPGGame {
         ground.receiveShadow = true;
         this.scene.add(ground);
 
-        // Create paths
-        this.createPath(0, 0, 40, 4, 0x9b8b6e); // Main path vertical
-        this.createPath(0, 0, 4, 30, 0x9b8b6e); // Main path horizontal
+        // Create paths with better appearance
+        this.createPath(0, 0, 6, 50, 0xa89968); // Main path vertical (wider)
+        this.createPath(0, 0, 50, 6, 0xa89968); // Main path horizontal (wider)
 
-        // Load buildings
-        await this.loadBuilding('pokecenter', 'Pokémon_Center.glb', -15, 0, -15, 3);
-        await this.loadBuilding('market', 'Nigrolino_market.glb', 15, 0, -15, 3);
+        // Load buildings with better scale
+        await this.loadBuilding('pokecenter', 'Pokémon_Center.glb', -15, 0.1, -15, 5);
+        await this.loadBuilding('market', 'Nigrolino_market.glb', 15, 0.1, -15, 5);
         
         // Create houses
         this.createHouse(-15, 0, 15, 0xff6b6b);
@@ -227,18 +253,28 @@ class RPGGame {
         this.wildMonsters = [];
         this.npcs = {};
 
-        // Create wild terrain
-        const groundGeometry = new THREE.PlaneGeometry(100, 100, 30, 30);
+        // Create wild terrain with more detail
+        const groundGeometry = new THREE.PlaneGeometry(100, 100, 60, 60);
         const vertices = groundGeometry.attributes.position.array;
+        
+        // More natural terrain with Perlin-like noise
         for (let i = 0; i < vertices.length; i += 3) {
-            vertices[i + 2] = Math.random() * 2 - 0.5; // Random height
+            const x = vertices[i];
+            const z = vertices[i + 1];
+            vertices[i + 2] = 
+                Math.sin(x * 0.1) * 1.5 + 
+                Math.cos(z * 0.1) * 1.5 +
+                Math.sin(x * 0.3) * 0.5 +
+                Math.cos(z * 0.3) * 0.5 +
+                Math.random() * 0.8;
         }
         groundGeometry.attributes.position.needsUpdate = true;
         groundGeometry.computeVertexNormals();
         
         const groundMaterial = new THREE.MeshStandardMaterial({
             color: 0x3a8c3a,
-            roughness: 0.9
+            roughness: 0.95,
+            metalness: 0.05
         });
         
         const ground = new THREE.Mesh(groundGeometry, groundMaterial);
@@ -283,8 +319,8 @@ class RPGGame {
             try {
                 const gltf = await this.loadGLTF(`modelli_3D/${monsterFiles[i]}`);
                 const monster = gltf.scene;
-                monster.scale.set(2, 2, 2);
-                monster.position.set(positions[i].x, 1, positions[i].z);
+                monster.scale.set(3, 3, 3);
+                monster.position.set(positions[i].x, 1.5, positions[i].z);
                 
                 monster.traverse((child) => {
                     if (child.isMesh) {
@@ -334,31 +370,57 @@ class RPGGame {
     createHouse(x, y, z, color) {
         const houseGroup = new THREE.Group();
         
-        // Walls
-        const wallGeometry = new THREE.BoxGeometry(8, 6, 8);
-        const wallMaterial = new THREE.MeshStandardMaterial({ color: color });
+        // Walls - larger and more detailed
+        const wallGeometry = new THREE.BoxGeometry(12, 10, 12);
+        const wallMaterial = new THREE.MeshStandardMaterial({ 
+            color: color,
+            roughness: 0.8,
+            metalness: 0.2
+        });
         const walls = new THREE.Mesh(wallGeometry, wallMaterial);
         walls.castShadow = true;
         walls.receiveShadow = true;
         houseGroup.add(walls);
 
-        // Roof
-        const roofGeometry = new THREE.ConeGeometry(6, 3, 4);
-        const roofMaterial = new THREE.MeshStandardMaterial({ color: 0x8b4513 });
+        // Roof - more detailed pyramid
+        const roofGeometry = new THREE.ConeGeometry(9, 5, 4);
+        const roofMaterial = new THREE.MeshStandardMaterial({ 
+            color: 0x8b4513,
+            roughness: 0.9
+        });
         const roof = new THREE.Mesh(roofGeometry, roofMaterial);
-        roof.position.y = 4.5;
+        roof.position.y = 7.5;
         roof.rotation.y = Math.PI / 4;
         roof.castShadow = true;
         houseGroup.add(roof);
 
         // Door
-        const doorGeometry = new THREE.BoxGeometry(2, 3, 0.2);
-        const doorMaterial = new THREE.MeshStandardMaterial({ color: 0x654321 });
+        const doorGeometry = new THREE.BoxGeometry(3, 5, 0.3);
+        const doorMaterial = new THREE.MeshStandardMaterial({ 
+            color: 0x654321,
+            roughness: 0.9
+        });
         const door = new THREE.Mesh(doorGeometry, doorMaterial);
-        door.position.set(0, -1.5, 4.1);
+        door.position.set(0, -2.5, 6.15);
         houseGroup.add(door);
+        
+        // Windows
+        const windowGeometry = new THREE.BoxGeometry(2, 2, 0.2);
+        const windowMaterial = new THREE.MeshStandardMaterial({ 
+            color: 0x87ceeb,
+            roughness: 0.1,
+            metalness: 0.5
+        });
+        
+        const window1 = new THREE.Mesh(windowGeometry, windowMaterial);
+        window1.position.set(-3, 1, 6.1);
+        houseGroup.add(window1);
+        
+        const window2 = new THREE.Mesh(windowGeometry, windowMaterial);
+        window2.position.set(3, 1, 6.1);
+        houseGroup.add(window2);
 
-        houseGroup.position.set(x, y + 3, z);
+        houseGroup.position.set(x, y + 5.1, z);
         houseGroup.userData.type = 'building';
         houseGroup.userData.id = 'house';
         houseGroup.userData.interactable = true;
@@ -382,30 +444,40 @@ class RPGGame {
     createNPCTrainer(npcId, x, y, z, color) {
         const npcGroup = new THREE.Group();
         
-        // Body
-        const bodyGeometry = new THREE.CylinderGeometry(0.8, 0.8, 3, 8);
-        const bodyMaterial = new THREE.MeshStandardMaterial({ color: color });
+        // Body - proportions similar to player
+        const bodyGeometry = new THREE.CylinderGeometry(1.2, 1.2, 4.5, 12);
+        const bodyMaterial = new THREE.MeshStandardMaterial({ 
+            color: color,
+            roughness: 0.7
+        });
         const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
         body.castShadow = true;
         body.receiveShadow = true;
         npcGroup.add(body);
         
         // Head
-        const headGeometry = new THREE.SphereGeometry(0.7, 16, 16);
-        const headMaterial = new THREE.MeshStandardMaterial({ color: 0xffdbac });
+        const headGeometry = new THREE.SphereGeometry(1, 20, 20);
+        const headMaterial = new THREE.MeshStandardMaterial({ 
+            color: 0xffdbac,
+            roughness: 0.8
+        });
         const head = new THREE.Mesh(headGeometry, headMaterial);
-        head.position.y = 2.2;
+        head.position.y = 3.3;
         head.castShadow = true;
         npcGroup.add(head);
         
-        // Exclamation mark (indicator)
-        const markGeometry = new THREE.BoxGeometry(0.3, 1, 0.1);
-        const markMaterial = new THREE.MeshStandardMaterial({ color: 0xffff00 });
+        // Exclamation mark (indicator) - larger and more visible
+        const markGeometry = new THREE.BoxGeometry(0.4, 1.5, 0.15);
+        const markMaterial = new THREE.MeshStandardMaterial({ 
+            color: 0xffff00,
+            emissive: 0xffff00,
+            emissiveIntensity: 0.5
+        });
         const mark = new THREE.Mesh(markGeometry, markMaterial);
-        mark.position.y = 4;
+        mark.position.y = 5.5;
         npcGroup.add(mark);
         
-        npcGroup.position.set(x, y + 1.5, z);
+        npcGroup.position.set(x, y + 2.3, z);
         npcGroup.userData.type = 'npc-trainer';
         npcGroup.userData.id = npcId;
         npcGroup.userData.interactable = true;
@@ -418,31 +490,69 @@ class RPGGame {
     }
 
     createTrees(dense = false) {
-        const count = dense ? 20 : 8;
-        const spread = dense ? 40 : 35;
+        const count = dense ? 25 : 12;
+        const spread = dense ? 40 : 38;
         
         for (let i = 0; i < count; i++) {
             const angle = (i / count) * Math.PI * 2;
             const radius = spread + Math.random() * 10;
             const x = Math.cos(angle) * radius;
             const z = Math.sin(angle) * radius;
+            const treeGroup = new THREE.Group();
 
-            // Trunk
-            const trunkGeometry = new THREE.CylinderGeometry(0.5, 0.7, 4, 8);
-            const trunkMaterial = new THREE.MeshStandardMaterial({ color: 0x4a3520 });
+            // Trunk - more realistic proportions
+            const trunkGeometry = new THREE.CylinderGeometry(0.8, 1, 6, 12);
+            const trunkMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0x4a3520,
+                roughness: 0.95
+            });
             const trunk = new THREE.Mesh(trunkGeometry, trunkMaterial);
-            trunk.position.set(x, 2, z);
+            trunk.position.y = 3;
             trunk.castShadow = true;
-            this.scene.add(trunk);
+            trunk.receiveShadow = true;
+            treeGroup.add(trunk);
 
-            // Foliage
-            const foliageGeometry = new THREE.ConeGeometry(3, 5, 8);
+            // Multi-layer foliage for more realistic tree
             const foliageColor = dense ? 0x2d5016 : 0x3a7f2d;
-            const foliageMaterial = new THREE.MeshStandardMaterial({ color: foliageColor });
-            const foliage = new THREE.Mesh(foliageGeometry, foliageMaterial);
-            foliage.position.set(x, 6, z);
-            foliage.castShadow = true;
-            this.scene.add(foliage);
+            
+            // Bottom layer
+            const foliage1 = new THREE.Mesh(
+                new THREE.ConeGeometry(4, 5, 12),
+                new THREE.MeshStandardMaterial({ 
+                    color: foliageColor,
+                    roughness: 0.9
+                })
+            );
+            foliage1.position.y = 7;
+            foliage1.castShadow = true;
+            treeGroup.add(foliage1);
+            
+            // Middle layer
+            const foliage2 = new THREE.Mesh(
+                new THREE.ConeGeometry(3.5, 4, 12),
+                new THREE.MeshStandardMaterial({ 
+                    color: foliageColor,
+                    roughness: 0.9
+                })
+            );
+            foliage2.position.y = 10;
+            foliage2.castShadow = true;
+            treeGroup.add(foliage2);
+            
+            // Top layer
+            const foliage3 = new THREE.Mesh(
+                new THREE.ConeGeometry(2.5, 3, 12),
+                new THREE.MeshStandardMaterial({ 
+                    color: foliageColor,
+                    roughness: 0.9
+                })
+            );
+            foliage3.position.y = 12.5;
+            foliage3.castShadow = true;
+            treeGroup.add(foliage3);
+            
+            treeGroup.position.set(x, 0.1, z);
+            this.scene.add(treeGroup);
         }
     }
 
@@ -454,23 +564,39 @@ class RPGGame {
 
         fencePositions.forEach(pos => {
             for (let i = 0; i < pos.length; i += 2) {
-                const postGeometry = new THREE.BoxGeometry(0.3, 2, 0.3);
-                const postMaterial = new THREE.MeshStandardMaterial({ color: 0x8b4513 });
+                const postGeometry = new THREE.BoxGeometry(0.5, 3, 0.5);
+                const postMaterial = new THREE.MeshStandardMaterial({ 
+                    color: 0x8b4513,
+                    roughness: 0.9
+                });
                 const post = new THREE.Mesh(postGeometry, postMaterial);
-                post.position.set(pos.x, 1, pos.z + i - pos.length / 2);
+                post.position.set(pos.x, 1.6, pos.z + i - pos.length / 2);
                 post.castShadow = true;
+                post.receiveShadow = true;
                 this.scene.add(post);
+                
+                // Horizontal rail
+                if (i < pos.length - 2) {
+                    const railGeometry = new THREE.BoxGeometry(0.3, 0.3, 2);
+                    const rail = new THREE.Mesh(railGeometry, postMaterial);
+                    rail.position.set(pos.x, 2, pos.z + i - pos.length / 2 + 1);
+                    rail.castShadow = true;
+                    this.scene.add(rail);
+                }
             }
         });
     }
 
     createRocks() {
-        for (let i = 0; i < 15; i++) {
-            const size = Math.random() * 1.5 + 0.5;
-            const geometry = new THREE.DodecahedronGeometry(size);
+        for (let i = 0; i < 20; i++) {
+            const size = Math.random() * 2.5 + 1;
+            const geometry = new THREE.DodecahedronGeometry(size, 1);
+            const grayVariation = Math.floor(Math.random() * 30) + 100;
+            const color = (grayVariation << 16) | (grayVariation << 8) | grayVariation;
             const material = new THREE.MeshStandardMaterial({
-                color: 0x808080,
-                roughness: 0.9
+                color: color,
+                roughness: 0.95,
+                metalness: 0.1
             });
             const rock = new THREE.Mesh(geometry, material);
             
@@ -478,30 +604,52 @@ class RPGGame {
             const radius = 25 + Math.random() * 15;
             rock.position.set(
                 Math.cos(angle) * radius,
-                size / 2,
+                size / 2 + 0.1,
                 Math.sin(angle) * radius
             );
+            rock.rotation.set(
+                Math.random() * Math.PI,
+                Math.random() * Math.PI,
+                Math.random() * Math.PI
+            );
             rock.castShadow = true;
+            rock.receiveShadow = true;
             this.scene.add(rock);
         }
     }
 
     createBushes() {
-        for (let i = 0; i < 10; i++) {
-            const geometry = new THREE.SphereGeometry(1, 8, 8);
-            const material = new THREE.MeshStandardMaterial({ color: 0x2d5016 });
-            const bush = new THREE.Mesh(geometry, material);
+        for (let i = 0; i < 15; i++) {
+            const bushGroup = new THREE.Group();
+            
+            // Multi-sphere bushes for more natural look
+            for (let j = 0; j < 3; j++) {
+                const size = Math.random() * 0.8 + 1.2;
+                const geometry = new THREE.SphereGeometry(size, 12, 12);
+                const greenVariation = Math.random() * 0x20 + 0x2d5016;
+                const material = new THREE.MeshStandardMaterial({ 
+                    color: 0x2d5016,
+                    roughness: 0.9
+                });
+                const sphere = new THREE.Mesh(geometry, material);
+                sphere.position.set(
+                    (Math.random() - 0.5) * 1.5,
+                    Math.random() * 0.5,
+                    (Math.random() - 0.5) * 1.5
+                );
+                sphere.scale.set(1, 0.8, 1);
+                sphere.castShadow = true;
+                bushGroup.add(sphere);
+            }
             
             const angle = Math.random() * Math.PI * 2;
             const radius = 20 + Math.random() * 20;
-            bush.position.set(
+            bushGroup.position.set(
                 Math.cos(angle) * radius,
-                0.5,
+                0.6,
                 Math.sin(angle) * radius
             );
-            bush.scale.set(1, 0.7, 1);
-            bush.castShadow = true;
-            this.scene.add(bush);
+            this.scene.add(bushGroup);
         }
     }
 
