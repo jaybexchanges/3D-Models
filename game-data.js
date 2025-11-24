@@ -93,6 +93,15 @@ export const TYPE_EFFECTIVENESS = {
         [ELEMENT_TYPES.WATER]: 0.5,
         [ELEMENT_TYPES.ELECTRIC]: 0.5,
         [ELEMENT_TYPES.STEEL]: 0.5
+    },
+    [ELEMENT_TYPES.POISON]: {
+        [ELEMENT_TYPES.GRASS]: 2.0,
+        [ELEMENT_TYPES.FAIRY]: 2.0,
+        [ELEMENT_TYPES.POISON]: 0.5,
+        [ELEMENT_TYPES.GROUND]: 0.5,
+        [ELEMENT_TYPES.ROCK]: 0.5,
+        [ELEMENT_TYPES.GHOST]: 0.5,
+        [ELEMENT_TYPES.STEEL]: 0
     }
 };
 
@@ -179,6 +188,15 @@ export const MOVES = {
     PSYCHIC: { name: 'Psychic', type: ELEMENT_TYPES.PSYCHIC, power: 90, accuracy: 100, description: 'Potere psichico' },
     ZEN_HEADBUTT: { name: 'Zen Headbutt', type: ELEMENT_TYPES.PSYCHIC, power: 80, accuracy: 90, description: 'Testata zen' },
     
+    // Poison type moves
+    POISON_STING: { name: 'Poison Sting', type: ELEMENT_TYPES.POISON, power: 15, accuracy: 100, description: 'Pungiglione velenoso' },
+    ACID: { name: 'Acid', type: ELEMENT_TYPES.POISON, power: 40, accuracy: 100, description: 'Liquido acido' },
+    POISON_JAB: { name: 'Poison Jab', type: ELEMENT_TYPES.POISON, power: 80, accuracy: 100, description: 'Colpo velenoso' },
+    SLUDGE_BOMB: { name: 'Sludge Bomb', type: ELEMENT_TYPES.POISON, power: 90, accuracy: 100, description: 'Bomba di fango' },
+    TOXIC: { name: 'Toxic', type: ELEMENT_TYPES.POISON, power: 60, accuracy: 90, description: 'Veleno potente' },
+    VENOSHOCK: { name: 'Venoshock', type: ELEMENT_TYPES.POISON, power: 65, accuracy: 100, description: 'Shock velenoso' },
+    SLUDGE_WAVE: { name: 'Sludge Wave', type: ELEMENT_TYPES.POISON, power: 95, accuracy: 100, description: 'Onda di fango' },
+    
     // Fairy type moves
     FAIRY_WIND: { name: 'Fairy Wind', type: ELEMENT_TYPES.FAIRY, power: 40, accuracy: 100, description: 'Vento fatato' },
     DRAINING_KISS: { name: 'Draining Kiss', type: ELEMENT_TYPES.FAIRY, power: 50, accuracy: 100, description: 'Bacio che drena' },
@@ -211,20 +229,20 @@ export const MONSTER_SPECIES = {
         expYield: 64,
         learnset: {
             1: 'TACKLE',
-            5: 'WATER_GUN',
-            9: 'FAIRY_WIND',
-            13: 'BUBBLE_BEAM',
-            17: 'DRAINING_KISS',
-            21: 'WATER_PULSE',
-            25: 'PLAY_ROUGH',
-            30: 'SURF',
-            35: 'MOONBLAST',
-            40: 'HYDRO_PUMP'
+            7: 'WATER_GUN',
+            10: 'FAIRY_WIND',
+            15: 'BUBBLE_BEAM',
+            20: 'DRAINING_KISS',
+            25: 'WATER_PULSE',
+            30: 'PLAY_ROUGH',
+            35: 'SURF',
+            40: 'MOONBLAST',
+            45: 'HYDRO_PUMP'
         }
     },
     'Gnugnu': {
         name: 'Gnugnu',
-        types: [ELEMENT_TYPES.GHOST, ELEMENT_TYPES.PSYCHIC],
+        types: [ELEMENT_TYPES.POISON, ELEMENT_TYPES.DARK],
         baseHP: 50,
         baseAttack: 55,
         baseDefense: 40,
@@ -233,16 +251,15 @@ export const MONSTER_SPECIES = {
         expYield: 72,
         learnset: {
             1: 'SCRATCH',
-            4: 'LICK',
-            8: 'CONFUSION',
-            12: 'SHADOW_SNEAK',
-            16: 'PSYBEAM',
-            20: 'SHADOW_PUNCH',
-            24: 'ZEN_HEADBUTT',
-            28: 'SHADOW_BALL',
-            32: 'PSYCHIC',
-            36: 'SHADOW_CLAW',
-            40: 'NIGHT_SHADE'
+            8: 'POISON_STING',
+            12: 'ACID',
+            16: 'LICK',
+            20: 'VENOSHOCK',
+            24: 'POISON_JAB',
+            28: 'SHADOW_SNEAK',
+            32: 'SLUDGE_BOMB',
+            36: 'TOXIC',
+            40: 'SLUDGE_WAVE'
         }
     },
     'Lotus': {
@@ -256,16 +273,16 @@ export const MONSTER_SPECIES = {
         expYield: 68,
         learnset: {
             1: 'TACKLE',
-            5: 'VINE_WHIP',
-            9: 'FAIRY_WIND',
-            13: 'RAZOR_LEAF',
-            17: 'MEGA_DRAIN',
-            21: 'DAZZLING_GLEAM',
-            25: 'SEED_BOMB',
-            29: 'ENERGY_BALL',
-            33: 'MOONBLAST',
-            37: 'SOLAR_BEAM',
-            42: 'PETAL_DANCE'
+            7: 'VINE_WHIP',
+            11: 'FAIRY_WIND',
+            15: 'RAZOR_LEAF',
+            19: 'MEGA_DRAIN',
+            23: 'DAZZLING_GLEAM',
+            27: 'SEED_BOMB',
+            31: 'ENERGY_BALL',
+            35: 'MOONBLAST',
+            39: 'SOLAR_BEAM',
+            44: 'PETAL_DANCE'
         }
     },
     'Blossom': {
@@ -279,14 +296,14 @@ export const MONSTER_SPECIES = {
         expYield: 70,
         learnset: {
             1: 'TACKLE',
-            6: 'VINE_WHIP',
-            11: 'RAZOR_LEAF',
-            16: 'QUICK_ATTACK',
-            21: 'MEGA_DRAIN',
-            26: 'SEED_BOMB',
-            31: 'ENERGY_BALL',
-            36: 'SOLAR_BEAM',
-            41: 'PETAL_DANCE'
+            8: 'VINE_WHIP',
+            13: 'RAZOR_LEAF',
+            18: 'QUICK_ATTACK',
+            23: 'MEGA_DRAIN',
+            28: 'SEED_BOMB',
+            33: 'ENERGY_BALL',
+            38: 'SOLAR_BEAM',
+            43: 'PETAL_DANCE'
         }
     },
     'LavaFlare': {
@@ -300,13 +317,13 @@ export const MONSTER_SPECIES = {
         expYield: 85,
         learnset: {
             1: 'TACKLE',
-            7: 'EMBER',
-            13: 'FLAME_WHEEL',
-            19: 'FIRE_PUNCH',
-            25: 'FLAMETHROWER',
-            31: 'HEAT_WAVE',
-            37: 'FIRE_BLAST',
-            43: 'INFERNO'
+            9: 'EMBER',
+            15: 'FLAME_WHEEL',
+            21: 'FIRE_PUNCH',
+            27: 'FLAMETHROWER',
+            33: 'HEAT_WAVE',
+            39: 'FIRE_BLAST',
+            45: 'INFERNO'
         }
     },
     'Pyrolynx': {
@@ -320,14 +337,14 @@ export const MONSTER_SPECIES = {
         expYield: 80,
         learnset: {
             1: 'SCRATCH',
-            6: 'EMBER',
-            11: 'QUICK_ATTACK',
-            16: 'FLAME_WHEEL',
-            21: 'BODY_SLAM',
-            26: 'FIRE_PUNCH',
-            31: 'FLAMETHROWER',
-            36: 'HYPER_FANG',
-            41: 'FIRE_BLAST'
+            8: 'EMBER',
+            13: 'QUICK_ATTACK',
+            18: 'FLAME_WHEEL',
+            23: 'BODY_SLAM',
+            28: 'FIRE_PUNCH',
+            33: 'FLAMETHROWER',
+            38: 'HYPER_FANG',
+            43: 'FIRE_BLAST'
         }
     }
 };
@@ -496,14 +513,17 @@ export class Monster {
     
     gainExp(amount) {
         this.exp += amount;
-        let leveledUp = false;
+        let levelUpResult = { leveledUp: false, newMove: null };
         
         while (this.exp >= this.expToNextLevel && this.level < 100) {
-            this.levelUp();
-            leveledUp = true;
+            const result = this.levelUp();
+            levelUpResult.leveledUp = true;
+            if (result.newMove) {
+                levelUpResult.newMove = result.newMove;
+            }
         }
         
-        return leveledUp;
+        return levelUpResult;
     }
     
     levelUp() {
@@ -529,9 +549,39 @@ export class Monster {
         this.expToNextLevel = this.calculateExpNeeded(this.level);
         
         // Check for new moves to learn
-        this.learnAvailableMoves();
+        const newMove = this.checkNewMoveToLearn();
         
-        return true;
+        return { leveledUp: true, newMove: newMove };
+    }
+    
+    checkNewMoveToLearn() {
+        const speciesData = MONSTER_SPECIES[this.species];
+        const learnset = speciesData.learnset || {};
+        
+        // Check if there's a move to learn at this level
+        const moveKey = learnset[this.level];
+        if (moveKey && MOVES[moveKey] && !this.hasMove(moveKey)) {
+            return moveKey;
+        }
+        return null;
+    }
+    
+    learnMove(moveKey, replaceIndex = null) {
+        if (!MOVES[moveKey]) return false;
+        
+        if (this.hasMove(moveKey)) return false;
+        
+        if (this.moves.length < 4) {
+            // Still have space, just add it
+            this.moves.push(moveKey);
+            return true;
+        } else if (replaceIndex !== null && replaceIndex >= 0 && replaceIndex < 4) {
+            // Replace the move at specified index
+            this.moves[replaceIndex] = moveKey;
+            return true;
+        }
+        
+        return false;
     }
     
     heal(amount) {

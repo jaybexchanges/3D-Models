@@ -815,9 +815,29 @@ class RPGGame {
         this.uiManager.addBattleLog(`${this.currentBattleEnemyMonster.name} è esausto!`);
         this.uiManager.addBattleLog(`${playerMonster.name} ha guadagnato ${expGained} EXP!`);
         
-        const leveledUp = playerMonster.gainExp(expGained);
-        if (leveledUp) {
+        const levelUpResult = playerMonster.gainExp(expGained);
+        if (levelUpResult.leveledUp) {
             this.uiManager.addBattleLog(`${playerMonster.name} è salito al livello ${playerMonster.level}!`);
+            
+            // Check if there's a new move to learn
+            if (levelUpResult.newMove) {
+                const newMove = MOVES[levelUpResult.newMove];
+                if (playerMonster.moves.length < 4) {
+                    // Auto-learn if less than 4 moves
+                    playerMonster.learnMove(levelUpResult.newMove);
+                    this.uiManager.addBattleLog(`${playerMonster.name} ha imparato ${newMove.name}!`);
+                } else {
+                    // Prompt user to replace a move
+                    this.pendingMoveLearn = {
+                        monster: playerMonster,
+                        moveKey: levelUpResult.newMove
+                    };
+                    setTimeout(() => {
+                        this.uiManager.showMoveReplacePrompt(playerMonster, levelUpResult.newMove);
+                    }, 2000);
+                    return; // Don't continue battle flow yet
+                }
+            }
         }
         
         this.uiManager.updateBattleUI(playerMonster, this.currentBattleEnemyMonster);
@@ -849,6 +869,40 @@ class RPGGame {
         } else {
             // Wild battle - remove monster from scene
             setTimeout(() => this.endBattle(true), 2000);
+        }
+    }
+    
+    continueBattleAfterMoveLearn() {
+        const playerMonster = this.playerTeam[0];
+        this.uiManager.updateBattleUI(playerMonster, this.currentBattleEnemyMonster);
+        
+        if (this.currentTrainer) {
+            // Trainer battle - check for next monster
+            this.trainerTeamIndex++;
+            const trainerData = this.currentTrainer.userData.npcData;
+            
+            if (this.trainerTeamIndex < trainerData.team.length) {
+                setTimeout(() => {
+                    const nextMonster = trainerData.team[this.trainerTeamIndex];
+                    this.currentBattleEnemyMonster = new Monster(nextMonster.species, nextMonster.level);
+                    this.uiManager.addBattleLog(`${trainerData.name} manda in campo ${this.currentBattleEnemyMonster.name}!`);
+                    this.uiManager.updateBattleUI(playerMonster, this.currentBattleEnemyMonster);
+                }, 1000);
+            } else {
+                // Trainer defeated
+                setTimeout(() => {
+                    this.inventory.money += trainerData.reward;
+                    this.uiManager.addBattleLog(`Hai sconfitto ${trainerData.name}!`);
+                    this.uiManager.addBattleLog(`Hai ricevuto ${trainerData.reward} monete!`);
+                    trainerData.defeated = true;
+                    // Remove exclamation mark from NPC
+                    this.currentTrainer.children[2].visible = false;
+                    setTimeout(() => this.endBattle(true), 2000);
+                }, 1000);
+            }
+        } else {
+            // Wild battle - remove monster from scene
+            setTimeout(() => this.endBattle(true), 1000);
         }
     }
     
