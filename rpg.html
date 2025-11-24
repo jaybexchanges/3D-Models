@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MonsterQuest RPG - Pokémon-like Game</title>
+    <link rel="stylesheet" href="rpg-styles.css">
     <script type="importmap">
     {
         "imports": {
@@ -92,98 +93,6 @@
             font-size: 11px;
         }
 
-        #interaction-prompt {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(0, 0, 0, 0.95);
-            color: white;
-            padding: 20px 30px;
-            border-radius: 15px;
-            border: 3px solid #ffd700;
-            font-size: 12px;
-            display: none;
-            pointer-events: auto;
-            text-align: center;
-            max-width: 400px;
-            z-index: 100;
-        }
-
-        #interaction-prompt.show {
-            display: block;
-        }
-
-        #interaction-prompt button {
-            margin: 10px 5px 0;
-            padding: 10px 20px;
-            background: #4CAF50;
-            color: white;
-            border: 2px solid #45a049;
-            border-radius: 5px;
-            cursor: pointer;
-            font-family: inherit;
-            font-size: 10px;
-            pointer-events: auto;
-        }
-
-        #interaction-prompt button:hover {
-            background: #45a049;
-        }
-
-        #battle-screen {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            display: none;
-            justify-content: center;
-            align-items: center;
-            flex-direction: column;
-            z-index: 200;
-        }
-
-        #battle-screen.active {
-            display: flex;
-        }
-
-        .battle-info {
-            background: rgba(0, 0, 0, 0.9);
-            padding: 30px;
-            border-radius: 20px;
-            border: 4px solid #ffd700;
-            text-align: center;
-            color: white;
-        }
-
-        .battle-info h2 {
-            color: #ff6b6b;
-            font-size: 20px;
-            margin-bottom: 20px;
-        }
-
-        .battle-actions {
-            margin-top: 20px;
-        }
-
-        .battle-actions button {
-            margin: 10px;
-            padding: 15px 30px;
-            font-size: 12px;
-            background: #ff6b6b;
-            color: white;
-            border: 3px solid #ff5252;
-            border-radius: 10px;
-            cursor: pointer;
-            font-family: inherit;
-        }
-
-        .battle-actions button:hover {
-            background: #ff5252;
-        }
-
         #loading {
             position: absolute;
             top: 50%;
@@ -249,27 +158,11 @@
             <div class="control-line"><span class="control-key">SHIFT</span> - Corri</div>
             <div class="control-line"><span class="control-key">E</span> - Interagisci</div>
             <div class="control-line"><span class="control-key">M</span> - Cambia Mappa</div>
+            <div class="control-line"><span class="control-key">ESC</span> - Menu</div>
             <div class="control-line"><span class="control-key">Mouse</span> - Ruota camera</div>
         </div>
 
         <canvas id="minimap"></canvas>
-    </div>
-
-    <div id="interaction-prompt">
-        <h3 id="prompt-title">Interazione</h3>
-        <p id="prompt-text">Premi E per interagire</p>
-        <div id="prompt-buttons"></div>
-    </div>
-
-    <div id="battle-screen">
-        <div class="battle-info">
-            <h2 id="battle-title">⚔️ Mostriciattolo Selvaggio!</h2>
-            <p id="battle-text">Un <span id="monster-name"></span> è apparso!</p>
-            <div class="battle-actions">
-                <button onclick="rpgGame.attemptCatch()">🎯 Cattura</button>
-                <button onclick="rpgGame.runFromBattle()">🏃 Fuggi</button>
-            </div>
-        </div>
     </div>
 
     <script type="module" src="rpg-game.js"></script>
