@@ -40,26 +40,26 @@
         /* Creiamo un livello sopra il lago che usa la stessa immagine ma distorta */
         .water-layer {
             position: absolute;
-            /* Posizionato sulla zona del lago nell'immagine */
-            top: 40%;
-            left: 0;
-            width: 100%;
-            height: 30%;
+            /* Posizionato sulla zona del lago nell'immagine - centrato e più stretto */
+            top: 45%;
+            left: 25%;
+            width: 50%;
+            height: 25%;
             
             /* Cloniamo lo sfondo */
             background-image: url('modelli_3D/background.jpeg');
             background-size: contain;
-            background-position: center 40%;
+            background-position: center 45%;
             background-repeat: no-repeat;
             
             /* Applichiamo il filtro SVG */
             filter: url('#turbulence-filter');
-            opacity: 0.7;
+            opacity: 0.4;
             z-index: 2;
             
             /* Maschera sfumata per bordi naturali */
-            mask-image: linear-gradient(to bottom, transparent, black 15%, black 85%, transparent);
-            -webkit-mask-image: linear-gradient(to bottom, transparent, black 15%, black 85%, transparent);
+            mask-image: linear-gradient(to bottom, transparent, black 20%, black 80%, transparent);
+            -webkit-mask-image: linear-gradient(to bottom, transparent, black 20%, black 80%, transparent);
         }
 
         /* --- EFFETTO NUVOLE --- */
