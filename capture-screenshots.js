@@ -111,6 +111,53 @@ const cameraPositions = [
         camera: { x: 0, z: 35 },
         target: { x: 0, z: 48 },
         heightOffset: 1.0
+    },
+    
+    // Additional building base verification views
+    {
+        name: '21_pokecenter_base_check',
+        description: 'Ground-level: Poké Center base verification (side angle)',
+        map: 'village',
+        groundLevel: true,
+        camera: { x: -25, z: -15 },
+        target: { x: -15, z: -15 },
+        heightOffset: 0.3
+    },
+    {
+        name: '22_market_base_check',
+        description: 'Ground-level: Market base verification (side angle)',
+        map: 'village',
+        groundLevel: true,
+        camera: { x: 25, z: -15 },
+        target: { x: 15, z: -15 },
+        heightOffset: 0.3
+    },
+    {
+        name: '23_house_red_base',
+        description: 'Ground-level: Red house base verification',
+        map: 'village',
+        groundLevel: true,
+        camera: { x: -5, z: 20 },
+        target: { x: -15, z: 15 },
+        heightOffset: 0.3
+    },
+    {
+        name: '24_house_blue_base',
+        description: 'Ground-level: Blue house base verification',
+        map: 'village',
+        groundLevel: true,
+        camera: { x: 5, z: 20 },
+        target: { x: 15, z: 15 },
+        heightOffset: 0.3
+    },
+    {
+        name: '25_player_perspective',
+        description: 'Player perspective: Looking at village center',
+        map: 'village',
+        groundLevel: true,
+        camera: { x: 0, z: 3 },
+        target: { x: 0, z: -10 },
+        heightOffset: 2.5
     }
 ];
 
