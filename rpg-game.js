@@ -885,7 +885,10 @@ export class RPGGame {
             const gltf = await this.loadGLTF(`modelli_3D/${filename}`);
             const building = gltf.scene;
             building.scale.set(scale, scale, scale);
-            building.position.set(x, 0, z);
+            
+            // Position at origin first to calculate bounding box correctly
+            building.position.set(0, 0, 0);
+            building.updateWorldMatrix(true, true);
             
             building.traverse((child) => {
                 if (child.isMesh) {
@@ -897,18 +900,28 @@ export class RPGGame {
             building.userData.type = 'building';
             building.userData.id = id;
             building.userData.interactable = true;
+            
+            // Calculate bounding box to find the bottom of the model
             const boundingBox = new THREE.Box3().setFromObject(building);
-            let baseHeight = -boundingBox.min.y;
-            if (!Number.isFinite(baseHeight) || baseHeight < 0.05) {
-                baseHeight = 0.5;
-            }
-            building.userData.baseHeight = baseHeight;
-            this.placeEntityOnGround(building, x, z, y);
+            // The offset needed to place the building's bottom at y=0
+            // boundingBox.min.y is the lowest point of the model
+            const yOffset = -boundingBox.min.y;
+            
+            // Store a baseHeight of 0 since we're manually calculating the offset
+            building.userData.baseHeight = 0;
+            
+            // Get ground height at target position
+            const groundHeight = this.getGroundHeight ? this.getGroundHeight(x, z) : 0;
+            
+            // Position building so its bottom sits on the ground
+            // Add the extraHeight (y parameter) on top
+            building.position.set(x, groundHeight + yOffset + y, z);
+            building.updateWorldMatrix(true, true);
             
             this.addToCurrentMap(building);
             this.registerCollider(building, 0.6);
             this.buildings[id] = building;
-            console.log(`✓ ${id} caricato`);
+            console.log(`✓ ${id} caricato (yOffset: ${yOffset.toFixed(2)})`);
             return building;
         } catch (error) {
             console.error(`Errore caricamento ${filename}:`, error);
@@ -919,6 +932,7 @@ export class RPGGame {
         const houseGroup = new THREE.Group();
         
         // Walls - larger and more detailed
+        // Height 10, positioned so bottom is at y=0 in local space
         const wallGeometry = new THREE.BoxGeometry(12, 10, 12);
         const wallMaterial = new THREE.MeshStandardMaterial({ 
             color: color,
@@ -926,6 +940,7 @@ export class RPGGame {
             metalness: 0.2
         });
         const walls = new THREE.Mesh(wallGeometry, wallMaterial);
+        walls.position.y = 5; // Move walls up so bottom is at y=0
         walls.castShadow = true;
         walls.receiveShadow = true;
         houseGroup.add(walls);
@@ -937,7 +952,7 @@ export class RPGGame {
             roughness: 0.9
         });
         const roof = new THREE.Mesh(roofGeometry, roofMaterial);
-        roof.position.y = 7.5;
+        roof.position.y = 12.5; // Adjusted for walls now at y=5 center (top at y=10) + roof half height
         roof.rotation.y = Math.PI / 4;
         roof.castShadow = true;
         houseGroup.add(roof);
@@ -949,7 +964,7 @@ export class RPGGame {
             roughness: 0.9
         });
         const door = new THREE.Mesh(doorGeometry, doorMaterial);
-        door.position.set(0, -2.5, 6.15);
+        door.position.set(0, 2.5, 6.15); // Door bottom at y=0, center at y=2.5
         houseGroup.add(door);
         
         // Windows
@@ -961,21 +976,19 @@ export class RPGGame {
         });
         
         const window1 = new THREE.Mesh(windowGeometry, windowMaterial);
-        window1.position.set(-3, 1, 6.1);
+        window1.position.set(-3, 6, 6.1); // Windows at reasonable height
         houseGroup.add(window1);
         
         const window2 = new THREE.Mesh(windowGeometry, windowMaterial);
-        window2.position.set(3, 1, 6.1);
+        window2.position.set(3, 6, 6.1);
         houseGroup.add(window2);
 
-        houseGroup.position.set(x, 0, z);
-        const boundingBox = new THREE.Box3().setFromObject(houseGroup);
-        let baseHeight = -boundingBox.min.y;
-        if (!Number.isFinite(baseHeight) || baseHeight < 0.05) {
-            baseHeight = 0.5;
-        }
-        houseGroup.userData.baseHeight = baseHeight;
-        this.placeEntityOnGround(houseGroup, x, z, y);
+        // Get ground height at target position
+        const groundHeight = this.getGroundHeight ? this.getGroundHeight(x, z) : 0;
+        
+        // Position house so its bottom sits on the ground
+        houseGroup.position.set(x, groundHeight + y, z);
+        houseGroup.userData.baseHeight = 0;
         houseGroup.userData.type = 'building';
         houseGroup.userData.id = 'house';
         houseGroup.userData.interactable = true;
