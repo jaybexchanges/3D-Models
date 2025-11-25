@@ -1,6 +1,6 @@
 # Automated Screenshot Test Report
 
-Generated: 2025-11-25T12:30:07.128Z
+Generated: 2025-11-25T15:00:34.925Z
 
 ## Summary
 
@@ -36,22 +36,22 @@ Generated: 2025-11-25T12:30:07.128Z
 | 1 | 31_wild_overview | (0.00, 40.00, 50.00) | Wild zone overview from above |
 | 2 | 32_wild_monsters_area | (30.00, 25.00, 30.00) | Wild zone monsters roaming area |
 | 3 | 33_wild_npc_trainer | (0.00, 20.00, -190.00) | Wild zone NPC trainer area (overhead) |
-| 4 | 41_ground_wild_center | (0.00, 1.60, 0.00) | Ground-level: Wild zone center view |
-| 5 | 42_ground_wild_monsters | (-20.00, -0.16, 20.00) | Ground-level: Looking at wild monsters area |
-| 6 | 43_ground_wild_trees | (50.00, 0.60, 50.00) | Ground-level: Trees and nature elements |
-| 7 | 44_ground_wild_rocks | (-40.00, 0.90, -40.00) | Ground-level: Rocks on terrain |
-| 8 | 45_ground_wild_npc | (10.00, 0.78, -200.00) | Ground-level: NPC trainer in wild zone |
-| 9 | 46_ground_wild_terrain | (0.00, 0.58, -100.00) | Ground-level: Terrain height variation check |
-| 10 | 47_wild_player_perspective | (0.00, 1.87, -30.00) | Player perspective: Looking across wild zone |
-| 11 | 51_walk_wild_north | (0.00, 2.84, -150.00) | Walking north in wild zone |
-| 12 | 52_walk_wild_east | (80.00, 2.50, 0.00) | Walking east in wild zone |
-| 13 | 53_walk_wild_west | (-80.00, 1.09, 0.00) | Walking west in wild zone |
-| 14 | 54_walk_wild_south | (0.00, -0.36, 150.00) | Walking south in wild zone |
-| 15 | 55_walk_wild_northeast | (60.00, 3.87, -60.00) | Walking northeast in wild zone |
-| 16 | 56_walk_wild_southwest | (-60.00, -0.22, 60.00) | Walking southwest in wild zone |
-| 17 | 57_walk_wild_closeup_tree | (30.00, 0.44, 30.00) | Close-up of tree placement on terrain |
-| 18 | 58_walk_wild_closeup_rock | (-30.00, 0.66, -30.00) | Close-up of rock placement on terrain |
-| 19 | 59_walk_wild_monster_encounter | (20.00, 1.94, 20.00) | Ground-level monster encounter view |
+| 4 | 41_ground_wild_center | (0.00, 5.55, 0.00) | Ground-level: Wild zone center view |
+| 5 | 42_ground_wild_monsters | (-20.00, 4.78, 20.00) | Ground-level: Looking at wild monsters area |
+| 6 | 43_ground_wild_trees | (50.00, 3.68, 50.00) | Ground-level: Trees and nature elements |
+| 7 | 44_ground_wild_rocks | (-40.00, 3.42, -40.00) | Ground-level: Rocks on terrain |
+| 8 | 45_ground_wild_npc | (10.00, 3.65, -200.00) | Ground-level: NPC trainer in wild zone |
+| 9 | 46_ground_wild_terrain | (0.00, 2.43, -100.00) | Ground-level: Terrain height variation check |
+| 10 | 47_wild_player_perspective | (0.00, 4.87, -30.00) | Player perspective: Looking across wild zone |
+| 11 | 51_walk_wild_north | (0.00, 4.86, -150.00) | Walking north in wild zone |
+| 12 | 52_walk_wild_east | (80.00, 2.81, 0.00) | Walking east in wild zone |
+| 13 | 53_walk_wild_west | (-80.00, 3.86, 0.00) | Walking west in wild zone |
+| 14 | 54_walk_wild_south | (0.00, 4.78, 150.00) | Walking south in wild zone |
+| 15 | 55_walk_wild_northeast | (60.00, 4.41, -60.00) | Walking northeast in wild zone |
+| 16 | 56_walk_wild_southwest | (-60.00, 5.66, 60.00) | Walking southwest in wild zone |
+| 17 | 57_walk_wild_closeup_tree | (30.00, 4.20, 30.00) | Close-up of tree placement on terrain |
+| 18 | 58_walk_wild_closeup_rock | (-30.00, 3.70, -30.00) | Close-up of rock placement on terrain |
+| 19 | 59_walk_wild_monster_encounter | (20.00, 5.88, 20.00) | Ground-level monster encounter view |
 | 20 | 60_walk_wild_panorama | (0.00, 60.00, 100.00) | Wide panorama view of wild zone |
 
 ## Ground-Level Views ("A Raso Terra")
