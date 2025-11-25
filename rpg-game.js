@@ -433,6 +433,8 @@ export class RPGGame {
         this.clearCurrentMap();
         this.setGroundHeightFunction(() => 0);
 
+        let modelHeight = 12; // Default height, will be updated from model
+        
         // Load the 3D model for Pokemon Center interior
         try {
             const gltf = await this.loadGLTF('modelli_3D/buildings_and_interiors/poke_center_inside.glb');
@@ -460,6 +462,7 @@ export class RPGGame {
             const boundingBox = new THREE.Box3().setFromObject(interior);
             const halfWidth = (boundingBox.max.x - boundingBox.min.x) / 2;
             const halfDepth = (boundingBox.max.z - boundingBox.min.z) / 2;
+            modelHeight = boundingBox.max.y - boundingBox.min.y;
             
             this.mapBounds = {
                 minX: boundingBox.min.x + 1.5,
@@ -468,7 +471,7 @@ export class RPGGame {
                 maxZ: boundingBox.max.z - 1.5
             };
             
-            console.log(`✓ Interno Poké Center caricato (bounds: ${halfWidth.toFixed(1)} x ${halfDepth.toFixed(1)})`);
+            console.log(`✓ Interno Poké Center caricato (bounds: ${halfWidth.toFixed(1)} x ${halfDepth.toFixed(1)}, height: ${modelHeight.toFixed(1)})`);
         } catch (error) {
             console.error('Errore caricamento interno Poké Center:', error);
             // Fallback to a simple floor if model fails to load
@@ -488,9 +491,9 @@ export class RPGGame {
             };
         }
 
-        // Add interior lighting
+        // Add interior lighting - position based on model height
         const receptionLight = new THREE.PointLight(0xfff2f2, 0.65, 70);
-        receptionLight.position.set(0, 10, 4);
+        receptionLight.position.set(0, modelHeight * 0.85, 4);
         receptionLight.castShadow = true;
         this.addToCurrentMap(receptionLight);
 
@@ -501,11 +504,12 @@ export class RPGGame {
         const targetSpawn = options.returnSpawn || this.currentReturnContext?.spawn || this.getDefaultSpawn(targetMap);
         const interiorSpawn = options.spawn || this.getDefaultSpawn('pokecenter');
 
-        // Create exit door trigger at the front of the room
+        // Create exit door trigger at the front of the room - position based on model height
+        const doorHeight = Math.min(6, modelHeight * 0.5);
         this.createDoorTrigger({
-            position: new THREE.Vector3(0, 3, this.mapBounds.minZ + 0.6),
+            position: new THREE.Vector3(0, doorHeight / 2, this.mapBounds.minZ + 0.6),
             width: 5.5,
-            height: 6,
+            height: doorHeight,
             depth: 1.6,
             targetMap,
             spawn: targetSpawn,
