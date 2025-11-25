@@ -886,7 +886,9 @@ export class RPGGame {
             const building = gltf.scene;
             building.scale.set(scale, scale, scale);
             
-            // Position at origin first to calculate bounding box correctly
+            // Position at origin first to calculate bounding box correctly.
+            // This is necessary because bounding box calculation can be affected
+            // by world transforms when the model is already positioned elsewhere.
             building.position.set(0, 0, 0);
             building.updateWorldMatrix(true, true);
             
@@ -952,7 +954,9 @@ export class RPGGame {
             roughness: 0.9
         });
         const roof = new THREE.Mesh(roofGeometry, roofMaterial);
-        roof.position.y = 12.5; // Adjusted for walls now at y=5 center (top at y=10) + roof half height
+        // Walls: height 10, center at y=5, so bottom at y=0 and top at y=10
+        // Roof (cone): height 5, center sits on top of walls, so position at y=10 + 5/2 = 12.5
+        roof.position.y = 12.5;
         roof.rotation.y = Math.PI / 4;
         roof.castShadow = true;
         houseGroup.add(roof);
