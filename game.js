@@ -207,16 +207,16 @@ class MonsterGame {
     async loadMonsters() {
         const loader = new GLTFLoader();
         const monsterConfigs = [
-            { name: 'blue', file: 'Blue_Puffball_3D.glb', position: { x: -15, y: 2, z: -8 }, scale: 2 },
-            { name: 'gnugnu', file: 'Gnugnu_3D.glb', position: { x: -5, y: 2, z: -8 }, scale: 2 },
-            { name: 'lotus', file: 'Lotus_3D.glb', position: { x: 5, y: 2, z: -8 }, scale: 2 },
-            { name: 'blossom', file: 'Blossom_3D.glb', position: { x: 15, y: 2, z: -8 }, scale: 2 },
-            { name: 'lavaflare', file: 'LavaFlare.glb', position: { x: -15, y: 2, z: 8 }, scale: 2 },
-            { name: 'pyrolynx', file: 'Pyrolynx.glb', position: { x: -5, y: 2, z: 8 }, scale: 2 },
-            { name: 'player1', file: 'Player_1.glb', position: { x: 5, y: 2, z: 8 }, scale: 2 },
-            { name: 'player2', file: 'Player_2.glb', position: { x: 15, y: 2, z: 8 }, scale: 2 },
-            { name: 'pokecenter', file: 'Pokémon_Center.glb', position: { x: 0, y: 2, z: 0 }, scale: 3, isBuilding: true },
-            { name: 'nigrolino', file: 'Nigrolino_market.glb', position: { x: -20, y: 2, z: 0 }, scale: 3, isBuilding: true }
+            { name: 'blue', file: 'monsters/Blue_Puffball_3D.glb', position: { x: -15, y: 2, z: -8 }, scale: 2 },
+            { name: 'gnugnu', file: 'monsters/Gnugnu_3D.glb', position: { x: -5, y: 2, z: -8 }, scale: 2 },
+            { name: 'lotus', file: 'monsters/Lotus_3D.glb', position: { x: 5, y: 2, z: -8 }, scale: 2 },
+            { name: 'blossom', file: 'monsters/Blossom_3D.glb', position: { x: 15, y: 2, z: -8 }, scale: 2 },
+            { name: 'lavaflare', file: 'monsters/LavaFlare.glb', position: { x: -15, y: 2, z: 8 }, scale: 2 },
+            { name: 'pyrolynx', file: 'monsters/Pyrolynx.glb', position: { x: -5, y: 2, z: 8 }, scale: 2 },
+            { name: 'player1', file: 'NPCs/Player_1.glb', position: { x: 5, y: 2, z: 8 }, scale: 2 },
+            { name: 'player2', file: 'NPCs/Player_2.glb', position: { x: 15, y: 2, z: 8 }, scale: 2 },
+            { name: 'pokecenter', file: 'buildings_and_interiors/Pokémon_Center.glb', position: { x: 0, y: 2, z: 0 }, scale: 3, isBuilding: true },
+            { name: 'nigrolino', file: 'buildings_and_interiors/Nigrolino_market.glb', position: { x: -20, y: 2, z: 0 }, scale: 3, isBuilding: true }
         ];
 
         let loadedCount = 0;
