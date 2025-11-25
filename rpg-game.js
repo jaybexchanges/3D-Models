@@ -743,37 +743,36 @@ export class RPGGame {
         const terrainMaterial = new THREE.MeshStandardMaterial({
             color: 0x3a8c3a,
             roughness: 0.94,
-            metalness: 0.05
+            metalness: 0.05,
+            flatShading: false  // Ensure smooth shading
         });
 
         const maxHalfWidth = (gridX * chunkSize) / 2;
         const maxHalfDepth = (gridZ * chunkSize) / 2;
 
-        for (let gx = 0; gx < gridX; gx++) {
-            for (let gz = 0; gz < gridZ; gz++) {
-                const geometry = new THREE.PlaneGeometry(chunkSize, chunkSize, 48, 48);
-                const vertices = geometry.attributes.position.array;
-                const offsetX = (startX + gx) * chunkSize;
-                const offsetZ = (startZ + gz) * chunkSize;
+        // Create a single large terrain mesh to avoid seams
+        const totalWidth = gridX * chunkSize;
+        const totalDepth = gridZ * chunkSize;
+        const segmentsX = gridX * 48;
+        const segmentsZ = gridZ * 48;
+        
+        const geometry = new THREE.PlaneGeometry(totalWidth, totalDepth, segmentsX, segmentsZ);
+        const vertices = geometry.attributes.position.array;
 
-                for (let i = 0; i < vertices.length; i += 3) {
-                    const localX = vertices[i];
-                    const localZ = vertices[i + 1];
-                    const worldX = localX + offsetX;
-                    const worldZ = localZ + offsetZ;
-                    vertices[i + 2] = heightFn(worldX, worldZ);
-                }
-
-                geometry.attributes.position.needsUpdate = true;
-                geometry.computeVertexNormals();
-
-                const terrainChunk = new THREE.Mesh(geometry, terrainMaterial);
-                terrainChunk.rotation.x = -Math.PI / 2;
-                terrainChunk.receiveShadow = true;
-                terrainChunk.position.set(offsetX, 0, offsetZ);
-                this.addToCurrentMap(terrainChunk);
-            }
+        for (let i = 0; i < vertices.length; i += 3) {
+            const localX = vertices[i];
+            const localZ = vertices[i + 1];
+            vertices[i + 2] = heightFn(localX, localZ);
         }
+
+        geometry.attributes.position.needsUpdate = true;
+        geometry.computeVertexNormals();
+
+        const terrain = new THREE.Mesh(geometry, terrainMaterial);
+        terrain.rotation.x = -Math.PI / 2;
+        terrain.receiveShadow = true;
+        terrain.position.set(0, 0, 0);
+        this.addToCurrentMap(terrain);
 
         this.createWildBackdrop(Math.max(maxHalfWidth, maxHalfDepth) + 120);
 
@@ -802,13 +801,15 @@ export class RPGGame {
     }
 
     async spawnWildMonsters() {
+        // Monster scales adjusted to be proportional to player (scale ~3)
+        // Range: 1.5 - 1.6 (smaller than before to fix oversized monsters)
         const monsterConfigs = [
-            { file: 'Blue_Puffball_3D.glb', scale: 1.9, speed: 0.8 },
-            { file: 'Gnugnu_3D.glb', scale: 2.4, speed: 1.1 },
-            { file: 'Lotus_3D.glb', scale: 2.1, speed: 0.7 },
-            { file: 'Blossom_3D.glb', scale: 2.1, speed: 0.9 },
-            { file: 'LavaFlare.glb', scale: 1.6, speed: 1.3 },
-            { file: 'Pyrolynx.glb', scale: 1.8, speed: 1.4 }
+            { file: 'Blue_Puffball_3D.glb', scale: 1.5, speed: 0.8 },
+            { file: 'Gnugnu_3D.glb', scale: 1.6, speed: 1.1 },
+            { file: 'Lotus_3D.glb', scale: 1.5, speed: 0.7 },
+            { file: 'Blossom_3D.glb', scale: 1.5, speed: 0.9 },
+            { file: 'LavaFlare.glb', scale: 1.5, speed: 1.3 },
+            { file: 'Pyrolynx.glb', scale: 1.5, speed: 1.4 }
         ];
 
         const spawnArea = {
@@ -1235,15 +1236,23 @@ export class RPGGame {
                 z = Math.sin(angle) * radius;
             }
             const groundHeight = this.getGroundHeight ? this.getGroundHeight(x, z) : 0;
-            rock.position.set(
-                x,
-                groundHeight + size / 2,
-                z
-            );
+            
+            // Apply rotation first, then calculate bounding box for proper ground placement
             rock.rotation.set(
                 Math.random() * Math.PI,
                 Math.random() * Math.PI,
                 Math.random() * Math.PI
+            );
+            rock.updateMatrixWorld(true);
+            
+            // Calculate actual bottom after rotation
+            const boundingBox = new THREE.Box3().setFromObject(rock);
+            const rockBottom = -boundingBox.min.y;
+            
+            rock.position.set(
+                x,
+                groundHeight + rockBottom,
+                z
             );
             rock.castShadow = true;
             rock.receiveShadow = true;
@@ -1268,10 +1277,10 @@ export class RPGGame {
             const bushGroup = new THREE.Group();
             
             // Multi-sphere bushes for more natural look
+            // Position spheres so their bottom is at y=0 in group space
             for (let j = 0; j < 3; j++) {
                 const size = Math.random() * 0.8 + 1.2;
                 const geometry = new THREE.SphereGeometry(size, 12, 12);
-                const greenVariation = Math.random() * 0x20 + 0x2d5016;
                 const material = new THREE.MeshStandardMaterial({ 
                     color: 0x2d5016,
                     roughness: 0.9
@@ -1279,7 +1288,7 @@ export class RPGGame {
                 const sphere = new THREE.Mesh(geometry, material);
                 sphere.position.set(
                     (Math.random() - 0.5) * 1.5,
-                    Math.random() * 0.5,
+                    size * 0.8 + Math.random() * 0.3, // Position so bottom touches ground
                     (Math.random() - 0.5) * 1.5
                 );
                 sphere.scale.set(1, 0.8, 1);
@@ -1302,7 +1311,7 @@ export class RPGGame {
             const groundHeight = this.getGroundHeight ? this.getGroundHeight(x, z) : 0;
             bushGroup.position.set(
                 x,
-                groundHeight + 0.6,
+                groundHeight,
                 z
             );
             this.addToCurrentMap(bushGroup);

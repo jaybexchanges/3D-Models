@@ -1,6 +1,6 @@
 # Automated Screenshot Test Report
 
-Generated: 2025-11-25T11:02:10.659Z
+Generated: 2025-11-25T11:17:01.521Z
 
 ## Summary
 
@@ -36,13 +36,13 @@ Generated: 2025-11-25T11:02:10.659Z
 | 1 | 31_wild_overview | (0.00, 40.00, 50.00) | Wild zone overview from above |
 | 2 | 32_wild_monsters_area | (30.00, 25.00, 30.00) | Wild zone monsters roaming area |
 | 3 | 33_wild_npc_trainer | (0.00, 20.00, -190.00) | Wild zone NPC trainer area (overhead) |
-| 4 | 41_ground_wild_center | (0.00, 1.79, 0.00) | Ground-level: Wild zone center view |
-| 5 | 42_ground_wild_monsters | (-20.00, 1.97, 20.00) | Ground-level: Looking at wild monsters area |
-| 6 | 43_ground_wild_trees | (50.00, -0.28, 50.00) | Ground-level: Trees and nature elements |
-| 7 | 44_ground_wild_rocks | (-40.00, 0.63, -40.00) | Ground-level: Rocks on terrain |
-| 8 | 45_ground_wild_npc | (10.00, 0.29, -200.00) | Ground-level: NPC trainer in wild zone |
-| 9 | 46_ground_wild_terrain | (0.00, 1.66, -100.00) | Ground-level: Terrain height variation check |
-| 10 | 47_wild_player_perspective | (0.00, 2.59, -30.00) | Player perspective: Looking across wild zone |
+| 4 | 41_ground_wild_center | (0.00, 1.91, 0.00) | Ground-level: Wild zone center view |
+| 5 | 42_ground_wild_monsters | (-20.00, 2.78, 20.00) | Ground-level: Looking at wild monsters area |
+| 6 | 43_ground_wild_trees | (50.00, 0.11, 50.00) | Ground-level: Trees and nature elements |
+| 7 | 44_ground_wild_rocks | (-40.00, 0.70, -40.00) | Ground-level: Rocks on terrain |
+| 8 | 45_ground_wild_npc | (10.00, 2.02, -200.00) | Ground-level: NPC trainer in wild zone |
+| 9 | 46_ground_wild_terrain | (0.00, 1.04, -100.00) | Ground-level: Terrain height variation check |
+| 10 | 47_wild_player_perspective | (0.00, 1.50, -30.00) | Player perspective: Looking across wild zone |
 
 ## Ground-Level Views ("A Raso Terra")
 
