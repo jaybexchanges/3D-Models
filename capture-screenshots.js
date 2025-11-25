@@ -247,6 +247,97 @@ const cameraPositions = [
         camera: { x: 0, z: -30 },
         target: { x: 0, z: -80 },
         heightOffset: 2.5
+    },
+    
+    // ===== WALKING EXPLORATION - Simulating player movement =====
+    // Walk around wild zone checking different areas
+    {
+        name: '51_walk_wild_north',
+        description: 'Walking north in wild zone',
+        map: 'wild',
+        groundLevel: true,
+        camera: { x: 0, z: -150 },
+        target: { x: 0, z: -200 },
+        heightOffset: 2.5
+    },
+    {
+        name: '52_walk_wild_east',
+        description: 'Walking east in wild zone',
+        map: 'wild',
+        groundLevel: true,
+        camera: { x: 80, z: 0 },
+        target: { x: 120, z: 0 },
+        heightOffset: 2.5
+    },
+    {
+        name: '53_walk_wild_west',
+        description: 'Walking west in wild zone',
+        map: 'wild',
+        groundLevel: true,
+        camera: { x: -80, z: 0 },
+        target: { x: -120, z: 0 },
+        heightOffset: 2.5
+    },
+    {
+        name: '54_walk_wild_south',
+        description: 'Walking south in wild zone',
+        map: 'wild',
+        groundLevel: true,
+        camera: { x: 0, z: 150 },
+        target: { x: 0, z: 200 },
+        heightOffset: 2.5
+    },
+    {
+        name: '55_walk_wild_northeast',
+        description: 'Walking northeast in wild zone',
+        map: 'wild',
+        groundLevel: true,
+        camera: { x: 60, z: -60 },
+        target: { x: 100, z: -100 },
+        heightOffset: 2.5
+    },
+    {
+        name: '56_walk_wild_southwest',
+        description: 'Walking southwest in wild zone',
+        map: 'wild',
+        groundLevel: true,
+        camera: { x: -60, z: 60 },
+        target: { x: -100, z: 100 },
+        heightOffset: 2.5
+    },
+    {
+        name: '57_walk_wild_closeup_tree',
+        description: 'Close-up of tree placement on terrain',
+        map: 'wild',
+        groundLevel: true,
+        camera: { x: 30, z: 30 },
+        target: { x: 35, z: 35 },
+        heightOffset: 1.0
+    },
+    {
+        name: '58_walk_wild_closeup_rock',
+        description: 'Close-up of rock placement on terrain',
+        map: 'wild',
+        groundLevel: true,
+        camera: { x: -30, z: -30 },
+        target: { x: -35, z: -35 },
+        heightOffset: 0.5
+    },
+    {
+        name: '59_walk_wild_monster_encounter',
+        description: 'Ground-level monster encounter view',
+        map: 'wild',
+        groundLevel: true,
+        camera: { x: 20, z: 20 },
+        target: { x: 0, z: 0 },
+        heightOffset: 2.5
+    },
+    {
+        name: '60_walk_wild_panorama',
+        description: 'Wide panorama view of wild zone',
+        map: 'wild',
+        camera: { x: 0, y: 60, z: 100 },
+        target: { x: 0, y: 0, z: -50 }
     }
 ];
 

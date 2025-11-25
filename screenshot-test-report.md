@@ -1,13 +1,13 @@
 # Automated Screenshot Test Report
 
-Generated: 2025-11-25T11:17:01.521Z
+Generated: 2025-11-25T12:30:07.128Z
 
 ## Summary
 
-- Total screenshots captured: 25/25
+- Total screenshots captured: 35/35
 - Village map views: 15
-- Wild zone views: 10
-- Ground-level views: 19
+- Wild zone views: 20
+- Ground-level views: 28
 
 ## Village Map Screenshots
 
@@ -36,13 +36,23 @@ Generated: 2025-11-25T11:17:01.521Z
 | 1 | 31_wild_overview | (0.00, 40.00, 50.00) | Wild zone overview from above |
 | 2 | 32_wild_monsters_area | (30.00, 25.00, 30.00) | Wild zone monsters roaming area |
 | 3 | 33_wild_npc_trainer | (0.00, 20.00, -190.00) | Wild zone NPC trainer area (overhead) |
-| 4 | 41_ground_wild_center | (0.00, 1.91, 0.00) | Ground-level: Wild zone center view |
-| 5 | 42_ground_wild_monsters | (-20.00, 2.78, 20.00) | Ground-level: Looking at wild monsters area |
-| 6 | 43_ground_wild_trees | (50.00, 0.11, 50.00) | Ground-level: Trees and nature elements |
-| 7 | 44_ground_wild_rocks | (-40.00, 0.70, -40.00) | Ground-level: Rocks on terrain |
-| 8 | 45_ground_wild_npc | (10.00, 2.02, -200.00) | Ground-level: NPC trainer in wild zone |
-| 9 | 46_ground_wild_terrain | (0.00, 1.04, -100.00) | Ground-level: Terrain height variation check |
-| 10 | 47_wild_player_perspective | (0.00, 1.50, -30.00) | Player perspective: Looking across wild zone |
+| 4 | 41_ground_wild_center | (0.00, 1.60, 0.00) | Ground-level: Wild zone center view |
+| 5 | 42_ground_wild_monsters | (-20.00, -0.16, 20.00) | Ground-level: Looking at wild monsters area |
+| 6 | 43_ground_wild_trees | (50.00, 0.60, 50.00) | Ground-level: Trees and nature elements |
+| 7 | 44_ground_wild_rocks | (-40.00, 0.90, -40.00) | Ground-level: Rocks on terrain |
+| 8 | 45_ground_wild_npc | (10.00, 0.78, -200.00) | Ground-level: NPC trainer in wild zone |
+| 9 | 46_ground_wild_terrain | (0.00, 0.58, -100.00) | Ground-level: Terrain height variation check |
+| 10 | 47_wild_player_perspective | (0.00, 1.87, -30.00) | Player perspective: Looking across wild zone |
+| 11 | 51_walk_wild_north | (0.00, 2.84, -150.00) | Walking north in wild zone |
+| 12 | 52_walk_wild_east | (80.00, 2.50, 0.00) | Walking east in wild zone |
+| 13 | 53_walk_wild_west | (-80.00, 1.09, 0.00) | Walking west in wild zone |
+| 14 | 54_walk_wild_south | (0.00, -0.36, 150.00) | Walking south in wild zone |
+| 15 | 55_walk_wild_northeast | (60.00, 3.87, -60.00) | Walking northeast in wild zone |
+| 16 | 56_walk_wild_southwest | (-60.00, -0.22, 60.00) | Walking southwest in wild zone |
+| 17 | 57_walk_wild_closeup_tree | (30.00, 0.44, 30.00) | Close-up of tree placement on terrain |
+| 18 | 58_walk_wild_closeup_rock | (-30.00, 0.66, -30.00) | Close-up of rock placement on terrain |
+| 19 | 59_walk_wild_monster_encounter | (20.00, 1.94, 20.00) | Ground-level monster encounter view |
+| 20 | 60_walk_wild_panorama | (0.00, 60.00, 100.00) | Wide panorama view of wild zone |
 
 ## Ground-Level Views ("A Raso Terra")
 
@@ -166,6 +176,60 @@ This perspective reveals objects that may be partially underground or floating a
 - **Camera**: (0, terrain+2.5, -30)
 - **Target**: (0, terrain+2.5, -80)
 - **File**: screenshots/47_wild_player_perspective.png
+
+#### 51_walk_wild_north
+- **Description**: Walking north in wild zone
+- **Camera**: (0, terrain+2.5, -150)
+- **Target**: (0, terrain+2.5, -200)
+- **File**: screenshots/51_walk_wild_north.png
+
+#### 52_walk_wild_east
+- **Description**: Walking east in wild zone
+- **Camera**: (80, terrain+2.5, 0)
+- **Target**: (120, terrain+2.5, 0)
+- **File**: screenshots/52_walk_wild_east.png
+
+#### 53_walk_wild_west
+- **Description**: Walking west in wild zone
+- **Camera**: (-80, terrain+2.5, 0)
+- **Target**: (-120, terrain+2.5, 0)
+- **File**: screenshots/53_walk_wild_west.png
+
+#### 54_walk_wild_south
+- **Description**: Walking south in wild zone
+- **Camera**: (0, terrain+2.5, 150)
+- **Target**: (0, terrain+2.5, 200)
+- **File**: screenshots/54_walk_wild_south.png
+
+#### 55_walk_wild_northeast
+- **Description**: Walking northeast in wild zone
+- **Camera**: (60, terrain+2.5, -60)
+- **Target**: (100, terrain+2.5, -100)
+- **File**: screenshots/55_walk_wild_northeast.png
+
+#### 56_walk_wild_southwest
+- **Description**: Walking southwest in wild zone
+- **Camera**: (-60, terrain+2.5, 60)
+- **Target**: (-100, terrain+2.5, 100)
+- **File**: screenshots/56_walk_wild_southwest.png
+
+#### 57_walk_wild_closeup_tree
+- **Description**: Close-up of tree placement on terrain
+- **Camera**: (30, terrain+1, 30)
+- **Target**: (35, terrain+1, 35)
+- **File**: screenshots/57_walk_wild_closeup_tree.png
+
+#### 58_walk_wild_closeup_rock
+- **Description**: Close-up of rock placement on terrain
+- **Camera**: (-30, terrain+0.5, -30)
+- **Target**: (-35, terrain+0.5, -35)
+- **File**: screenshots/58_walk_wild_closeup_rock.png
+
+#### 59_walk_wild_monster_encounter
+- **Description**: Ground-level monster encounter view
+- **Camera**: (20, terrain+2.5, 20)
+- **Target**: (0, terrain+2.5, 0)
+- **File**: screenshots/59_walk_wild_monster_encounter.png
 
 ## Notes
 
