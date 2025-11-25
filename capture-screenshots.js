@@ -158,6 +158,95 @@ const cameraPositions = [
         camera: { x: 0, z: 3 },
         target: { x: 0, z: -10 },
         heightOffset: 2.5
+    },
+    
+    // ===== ZONA SELVAGGIA (Wild Zone) =====
+    // Standard overhead views
+    {
+        name: '31_wild_overview',
+        description: 'Wild zone overview from above',
+        map: 'wild',
+        camera: { x: 0, y: 40, z: 50 },
+        target: { x: 0, y: 0, z: 0 }
+    },
+    {
+        name: '32_wild_monsters_area',
+        description: 'Wild zone monsters roaming area',
+        map: 'wild',
+        camera: { x: 30, y: 25, z: 30 },
+        target: { x: 0, y: 0, z: 0 }
+    },
+    {
+        name: '33_wild_npc_trainer',
+        description: 'Wild zone NPC trainer area (overhead)',
+        map: 'wild',
+        camera: { x: 0, y: 20, z: -190 },
+        target: { x: 0, y: 0, z: -210 }
+    },
+    
+    // Ground-level views for wild zone
+    {
+        name: '41_ground_wild_center',
+        description: 'Ground-level: Wild zone center view',
+        map: 'wild',
+        groundLevel: true,
+        camera: { x: 0, z: 0 },
+        target: { x: 30, z: 0 },
+        heightOffset: 2.0
+    },
+    {
+        name: '42_ground_wild_monsters',
+        description: 'Ground-level: Looking at wild monsters area',
+        map: 'wild',
+        groundLevel: true,
+        camera: { x: -20, z: 20 },
+        target: { x: 20, z: -20 },
+        heightOffset: 1.5
+    },
+    {
+        name: '43_ground_wild_trees',
+        description: 'Ground-level: Trees and nature elements',
+        map: 'wild',
+        groundLevel: true,
+        camera: { x: 50, z: 50 },
+        target: { x: 80, z: 80 },
+        heightOffset: 1.0
+    },
+    {
+        name: '44_ground_wild_rocks',
+        description: 'Ground-level: Rocks on terrain',
+        map: 'wild',
+        groundLevel: true,
+        camera: { x: -40, z: -40 },
+        target: { x: -70, z: -70 },
+        heightOffset: 0.5
+    },
+    {
+        name: '45_ground_wild_npc',
+        description: 'Ground-level: NPC trainer in wild zone',
+        map: 'wild',
+        groundLevel: true,
+        camera: { x: 10, z: -200 },
+        target: { x: 0, z: -210 },
+        heightOffset: 2.0
+    },
+    {
+        name: '46_ground_wild_terrain',
+        description: 'Ground-level: Terrain height variation check',
+        map: 'wild',
+        groundLevel: true,
+        camera: { x: 0, z: -100 },
+        target: { x: 0, z: -150 },
+        heightOffset: 0.3
+    },
+    {
+        name: '47_wild_player_perspective',
+        description: 'Player perspective: Looking across wild zone',
+        map: 'wild',
+        groundLevel: true,
+        camera: { x: 0, z: -30 },
+        target: { x: 0, z: -80 },
+        heightOffset: 2.5
     }
 ];
 
@@ -268,6 +357,41 @@ async function waitForGameLoad(page) {
 }
 
 /**
+ * Switch to a specific map
+ */
+async function switchToMap(page, targetMap) {
+    console.log(`🗺️  Switching to map: ${targetMap}...`);
+    
+    const result = await page.evaluate(async (map) => {
+        const game = window.rpgGame;
+        if (!game) {
+            return { error: 'Game not initialized' };
+        }
+        
+        if (game.currentMap === map) {
+            return { success: true, message: 'Already on target map' };
+        }
+        
+        try {
+            await game.switchMap(map);
+            return { success: true, currentMap: game.currentMap };
+        } catch (e) {
+            return { error: 'Failed to switch map: ' + e.message };
+        }
+    }, targetMap);
+    
+    if (result.error) {
+        console.log(`   ⚠️ Error: ${result.error}`);
+        return false;
+    }
+    
+    // Wait for map to fully load and render
+    await new Promise(resolve => setTimeout(resolve, 3000));
+    console.log(`   ✓ Now on map: ${targetMap}`);
+    return true;
+}
+
+/**
  * Capture screenshot at specified camera position
  */
 async function captureScreenshot(page, position) {
@@ -352,24 +476,46 @@ async function captureScreenshot(page, position) {
 function generateReport(screenshots) {
     const reportPath = path.join(__dirname, 'screenshot-test-report.md');
     
+    const villageShots = cameraPositions.filter(p => p.map === 'village');
+    const wildShots = cameraPositions.filter(p => p.map === 'wild');
+    
     let report = `# Automated Screenshot Test Report
 
 Generated: ${new Date().toISOString()}
 
 ## Summary
 
-- Total screenshots captured: ${screenshots.length}
-- Ground-level views: ${screenshots.filter(s => s && s.filename.includes('ground')).length}
-- Overhead views: ${screenshots.filter(s => s && !s.filename.includes('ground')).length}
+- Total screenshots captured: ${screenshots.filter(s => s !== null).length}/${screenshots.length}
+- Village map views: ${villageShots.length}
+- Wild zone views: ${wildShots.length}
+- Ground-level views: ${cameraPositions.filter(p => p.groundLevel).length}
 
-## Screenshots
+## Village Map Screenshots
 
 | # | Name | Camera Position | Description |
 |---|------|-----------------|-------------|
 `;
 
-    cameraPositions.forEach((pos, idx) => {
-        const shot = screenshots[idx];
+    villageShots.forEach((pos, idx) => {
+        const shotIdx = cameraPositions.indexOf(pos);
+        const shot = screenshots[shotIdx];
+        if (shot) {
+            report += `| ${idx + 1} | ${pos.name} | (${shot.position.x}, ${shot.position.y}, ${shot.position.z}) | ${pos.description} |\n`;
+        } else {
+            report += `| ${idx + 1} | ${pos.name} | - | ${pos.description} (FAILED) |\n`;
+        }
+    });
+
+    report += `
+## Wild Zone (Zona Selvaggia) Screenshots
+
+| # | Name | Camera Position | Description |
+|---|------|-----------------|-------------|
+`;
+
+    wildShots.forEach((pos, idx) => {
+        const shotIdx = cameraPositions.indexOf(pos);
+        const shot = screenshots[shotIdx];
         if (shot) {
             report += `| ${idx + 1} | ${pos.name} | (${shot.position.x}, ${shot.position.y}, ${shot.position.z}) | ${pos.description} |\n`;
         } else {
@@ -387,8 +533,23 @@ This perspective reveals objects that may be partially underground or floating a
 
 `;
 
-    const groundLevelShots = cameraPositions.filter(p => p.groundLevel);
-    groundLevelShots.forEach(pos => {
+    const villageGroundShots = cameraPositions.filter(p => p.groundLevel && p.map === 'village');
+    villageGroundShots.forEach(pos => {
+        report += `#### ${pos.name}
+- **Description**: ${pos.description}
+- **Camera**: (${pos.camera.x}, terrain+${pos.heightOffset}, ${pos.camera.z})
+- **Target**: (${pos.target.x}, terrain+${pos.heightOffset}, ${pos.target.z})
+- **File**: screenshots/${pos.name}.png
+
+`;
+    });
+
+    report += `### Wild Zone Ground-Level Views
+
+`;
+
+    const wildGroundShots = cameraPositions.filter(p => p.groundLevel && p.map === 'wild');
+    wildGroundShots.forEach(pos => {
         report += `#### ${pos.name}
 - **Description**: ${pos.description}
 - **Camera**: (${pos.camera.x}, terrain+${pos.heightOffset}, ${pos.camera.z})
@@ -403,6 +564,7 @@ This perspective reveals objects that may be partially underground or floating a
 - All screenshots were captured from a live dev server instance
 - Camera positions use terrain height function for ground-level views
 - Ground-level views help identify objects placed below or above terrain level
+- Wild zone has dynamic terrain with height variations
 `;
 
     fs.writeFileSync(reportPath, report);
@@ -445,8 +607,21 @@ async function main() {
         // Capture screenshots
         console.log('\n📷 Capturing screenshots...\n');
         const screenshots = [];
+        let currentMap = 'village'; // Game starts in village
         
         for (const position of cameraPositions) {
+            // Switch map if needed
+            if (position.map && position.map !== currentMap) {
+                const switched = await switchToMap(page, position.map);
+                if (switched) {
+                    currentMap = position.map;
+                } else {
+                    console.log(`   ⚠️ Skipping ${position.name} due to map switch failure`);
+                    screenshots.push(null);
+                    continue;
+                }
+            }
+            
             const result = await captureScreenshot(page, position);
             screenshots.push(result);
         }

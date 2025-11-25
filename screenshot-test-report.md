@@ -1,14 +1,15 @@
 # Automated Screenshot Test Report
 
-Generated: 2025-11-25T10:36:38.264Z
+Generated: 2025-11-25T11:02:10.659Z
 
 ## Summary
 
-- Total screenshots captured: 15
-- Ground-level views: 7
-- Overhead views: 8
+- Total screenshots captured: 25/25
+- Village map views: 15
+- Wild zone views: 10
+- Ground-level views: 19
 
-## Screenshots
+## Village Map Screenshots
 
 | # | Name | Camera Position | Description |
 |---|------|-----------------|-------------|
@@ -27,6 +28,21 @@ Generated: 2025-11-25T10:36:38.264Z
 | 13 | 23_house_red_base | (-5.00, 0.03, 20.00) | Ground-level: Red house base verification |
 | 14 | 24_house_blue_base | (5.00, 0.32, 20.00) | Ground-level: Blue house base verification |
 | 15 | 25_player_perspective | (0.00, 2.79, 3.00) | Player perspective: Looking at village center |
+
+## Wild Zone (Zona Selvaggia) Screenshots
+
+| # | Name | Camera Position | Description |
+|---|------|-----------------|-------------|
+| 1 | 31_wild_overview | (0.00, 40.00, 50.00) | Wild zone overview from above |
+| 2 | 32_wild_monsters_area | (30.00, 25.00, 30.00) | Wild zone monsters roaming area |
+| 3 | 33_wild_npc_trainer | (0.00, 20.00, -190.00) | Wild zone NPC trainer area (overhead) |
+| 4 | 41_ground_wild_center | (0.00, 1.79, 0.00) | Ground-level: Wild zone center view |
+| 5 | 42_ground_wild_monsters | (-20.00, 1.97, 20.00) | Ground-level: Looking at wild monsters area |
+| 6 | 43_ground_wild_trees | (50.00, -0.28, 50.00) | Ground-level: Trees and nature elements |
+| 7 | 44_ground_wild_rocks | (-40.00, 0.63, -40.00) | Ground-level: Rocks on terrain |
+| 8 | 45_ground_wild_npc | (10.00, 0.29, -200.00) | Ground-level: NPC trainer in wild zone |
+| 9 | 46_ground_wild_terrain | (0.00, 1.66, -100.00) | Ground-level: Terrain height variation check |
+| 10 | 47_wild_player_perspective | (0.00, 2.59, -30.00) | Player perspective: Looking across wild zone |
 
 ## Ground-Level Views ("A Raso Terra")
 
@@ -107,8 +123,53 @@ This perspective reveals objects that may be partially underground or floating a
 - **Target**: (0, terrain+2.5, -10)
 - **File**: screenshots/25_player_perspective.png
 
+### Wild Zone Ground-Level Views
+
+#### 41_ground_wild_center
+- **Description**: Ground-level: Wild zone center view
+- **Camera**: (0, terrain+2, 0)
+- **Target**: (30, terrain+2, 0)
+- **File**: screenshots/41_ground_wild_center.png
+
+#### 42_ground_wild_monsters
+- **Description**: Ground-level: Looking at wild monsters area
+- **Camera**: (-20, terrain+1.5, 20)
+- **Target**: (20, terrain+1.5, -20)
+- **File**: screenshots/42_ground_wild_monsters.png
+
+#### 43_ground_wild_trees
+- **Description**: Ground-level: Trees and nature elements
+- **Camera**: (50, terrain+1, 50)
+- **Target**: (80, terrain+1, 80)
+- **File**: screenshots/43_ground_wild_trees.png
+
+#### 44_ground_wild_rocks
+- **Description**: Ground-level: Rocks on terrain
+- **Camera**: (-40, terrain+0.5, -40)
+- **Target**: (-70, terrain+0.5, -70)
+- **File**: screenshots/44_ground_wild_rocks.png
+
+#### 45_ground_wild_npc
+- **Description**: Ground-level: NPC trainer in wild zone
+- **Camera**: (10, terrain+2, -200)
+- **Target**: (0, terrain+2, -210)
+- **File**: screenshots/45_ground_wild_npc.png
+
+#### 46_ground_wild_terrain
+- **Description**: Ground-level: Terrain height variation check
+- **Camera**: (0, terrain+0.3, -100)
+- **Target**: (0, terrain+0.3, -150)
+- **File**: screenshots/46_ground_wild_terrain.png
+
+#### 47_wild_player_perspective
+- **Description**: Player perspective: Looking across wild zone
+- **Camera**: (0, terrain+2.5, -30)
+- **Target**: (0, terrain+2.5, -80)
+- **File**: screenshots/47_wild_player_perspective.png
+
 ## Notes
 
 - All screenshots were captured from a live dev server instance
 - Camera positions use terrain height function for ground-level views
 - Ground-level views help identify objects placed below or above terrain level
+- Wild zone has dynamic terrain with height variations
