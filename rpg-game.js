@@ -761,8 +761,10 @@ export class RPGGame {
 
         for (let i = 0; i < vertices.length; i += 3) {
             const localX = vertices[i];
-            const localZ = vertices[i + 1];
-            vertices[i + 2] = heightFn(localX, localZ);
+            // After rotation.x = -PI/2, local Y becomes world -Z
+            // So we use -localY to get the world Z coordinate for consistent height calculation
+            const worldZ = -vertices[i + 1];
+            vertices[i + 2] = heightFn(localX, worldZ);
         }
 
         geometry.attributes.position.needsUpdate = true;
