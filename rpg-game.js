@@ -440,8 +440,8 @@ export class RPGGame {
             const gltf = await this.loadGLTF('modelli_3D/buildings_and_interiors/poke_center_inside.glb');
             const interior = gltf.scene;
             
-            // Scale the model appropriately
-            const scale = 4;
+            // Scale the model appropriately - use larger scale for interior
+            const scale = 15;
             interior.scale.set(scale, scale, scale);
             
             // Position the model
