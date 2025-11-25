@@ -199,7 +199,7 @@ export class RPGGame {
 
     async loadPlayer() {
         try {
-            const gltf = await this.loadGLTF('modelli_3D/Player_1.glb');
+            const gltf = await this.loadGLTF('modelli_3D/NPCs/Player_1.glb');
             this.player = gltf.scene;
             this.player.scale.set(3, 3, 3);
             const boundingBox = new THREE.Box3().setFromObject(this.player);
@@ -394,8 +394,8 @@ export class RPGGame {
         this.createPath(0, 0, 50, 6, 0xa89968); // Main path horizontal (wider)
 
         // Load buildings with better scale
-        const pokeCenter = await this.loadBuilding('pokecenter', 'Pokémon_Center.glb', -15, 0, -15, 4.5);
-        const market = await this.loadBuilding('market', 'Nigrolino_market.glb', 15, 0, -15, 4);
+        const pokeCenter = await this.loadBuilding('pokecenter', 'buildings_and_interiors/Pokémon_Center.glb', -15, 0, -15, 4.5);
+        const market = await this.loadBuilding('market', 'buildings_and_interiors/Nigrolino_market.glb', 15, 0, -15, 4);
         this.createBuildingDoor(pokeCenter, {
             targetMap: 'pokecenter',
             spawn: { x: 0, z: -10 },
@@ -806,12 +806,12 @@ export class RPGGame {
         // Monster scales adjusted to be proportional to player (scale ~3)
         // Range: 1.5 - 1.6 (smaller than before to fix oversized monsters)
         const monsterConfigs = [
-            { file: 'Blue_Puffball_3D.glb', scale: 1.5, speed: 0.8 },
-            { file: 'Gnugnu_3D.glb', scale: 1.6, speed: 1.1 },
-            { file: 'Lotus_3D.glb', scale: 1.5, speed: 0.7 },
-            { file: 'Blossom_3D.glb', scale: 1.5, speed: 0.9 },
-            { file: 'LavaFlare.glb', scale: 1.5, speed: 1.3 },
-            { file: 'Pyrolynx.glb', scale: 1.5, speed: 1.4 }
+            { file: 'monsters/Blue_Puffball_3D.glb', scale: 1.5, speed: 0.8 },
+            { file: 'monsters/Gnugnu_3D.glb', scale: 1.6, speed: 1.1 },
+            { file: 'monsters/Lotus_3D.glb', scale: 1.5, speed: 0.7 },
+            { file: 'monsters/Blossom_3D.glb', scale: 1.5, speed: 0.9 },
+            { file: 'monsters/LavaFlare.glb', scale: 1.5, speed: 1.3 },
+            { file: 'monsters/Pyrolynx.glb', scale: 1.5, speed: 1.4 }
         ];
 
         const spawnArea = {

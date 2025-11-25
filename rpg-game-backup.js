@@ -111,7 +111,7 @@ class RPGGame {
 
     async loadPlayer() {
         try {
-            const gltf = await this.loadGLTF('modelli_3D/Player_1.glb');
+            const gltf = await this.loadGLTF('modelli_3D/NPCs/Player_1.glb');
             this.player = gltf.scene;
             this.player.scale.set(2, 2, 2);
             this.player.position.set(0, 0, 0);
@@ -148,8 +148,8 @@ class RPGGame {
         this.createPath(0, 0, 4, 30, 0x9b8b6e); // Main path horizontal
 
         // Load buildings
-        await this.loadBuilding('pokecenter', 'Pokémon_Center.glb', -15, 0, -15, 3);
-        await this.loadBuilding('market', 'Nigrolino_market.glb', 15, 0, -15, 3);
+        await this.loadBuilding('pokecenter', 'buildings_and_interiors/Pokémon_Center.glb', -15, 0, -15, 3);
+        await this.loadBuilding('market', 'buildings_and_interiors/Nigrolino_market.glb', 15, 0, -15, 3);
         
         // Create houses
         this.createHouse(-15, 0, 15, 0xff6b6b);
@@ -207,12 +207,12 @@ class RPGGame {
 
     async spawnWildMonsters() {
         const monsterFiles = [
-            'Blue_Puffball_3D.glb',
-            'Gnugnu_3D.glb',
-            'Lotus_3D.glb',
-            'Blossom_3D.glb',
-            'LavaFlare.glb',
-            'Pyrolynx.glb'
+            'monsters/Blue_Puffball_3D.glb',
+            'monsters/Gnugnu_3D.glb',
+            'monsters/Lotus_3D.glb',
+            'monsters/Blossom_3D.glb',
+            'monsters/LavaFlare.glb',
+            'monsters/Pyrolynx.glb'
         ];
 
         const positions = [
@@ -239,7 +239,7 @@ class RPGGame {
                 });
 
                 monster.userData.type = 'wild-monster';
-                monster.userData.name = monsterFiles[i].replace('_3D.glb', '').replace('.glb', '');
+                monster.userData.name = monsterFiles[i].replace('monsters/', '').replace('_3D.glb', '').replace('.glb', '');
                 monster.userData.idlePhase = Math.random() * Math.PI * 2;
                 
                 this.scene.add(monster);
