@@ -423,7 +423,7 @@ export class RPGGame {
         this.createNPCTrainer('trainer2', 25, 0, 5, 0x0000ff);
 
         // Add decorations
-        this.createTrees();
+        await this.createTrees();
         this.createFences();
 
         console.log('✓ Villaggio creato');
@@ -433,127 +433,67 @@ export class RPGGame {
         this.clearCurrentMap();
         this.setGroundHeightFunction(() => 0);
 
-        const roomWidth = 42;
-        const roomDepth = 54;
-        const wallHeight = 12;
-        const wallThickness = 0.8;
-        const doorOpening = 8;
-        const halfWidth = roomWidth / 2;
-        const halfDepth = roomDepth / 2;
-
-        this.mapBounds = {
-            minX: -halfWidth + 1.5,
-            maxX: halfWidth - 1.5,
-            minZ: -halfDepth + 1.5,
-            maxZ: halfDepth - 1.5
-        };
-
-        const floor = new THREE.Mesh(
-            new THREE.PlaneGeometry(roomWidth, roomDepth),
-            new THREE.MeshStandardMaterial({ color: 0xfdf6f6, roughness: 0.82, metalness: 0.08 })
-        );
-        floor.rotation.x = -Math.PI / 2;
-        floor.receiveShadow = true;
-        this.addToCurrentMap(floor);
-
-        const accentMat = new THREE.MeshStandardMaterial({ color: 0xff8a8a, roughness: 0.55 });
-        const centralCarpet = new THREE.Mesh(new THREE.CircleGeometry(9, 32), accentMat);
-        centralCarpet.rotation.x = -Math.PI / 2;
-        centralCarpet.position.set(0, 0.05, -2);
-        centralCarpet.receiveShadow = true;
-        this.addToCurrentMap(centralCarpet);
-
-        const wallMaterial = new THREE.MeshStandardMaterial({ color: 0xe3efff, roughness: 0.7 });
-        const createWallSegment = (width, x, z) => {
-            const wall = new THREE.Mesh(new THREE.BoxGeometry(width, wallHeight, wallThickness), wallMaterial);
-            wall.position.set(x, wallHeight / 2, z);
-            wall.castShadow = true;
-            wall.receiveShadow = true;
-            this.addToCurrentMap(wall);
-            this.registerCollider(wall, 0.4);
-        };
-
-        createWallSegment(roomWidth, 0, halfDepth - wallThickness / 2);
-        const sideWallGeometry = new THREE.BoxGeometry(roomDepth, wallHeight, wallThickness);
-        const leftWall = new THREE.Mesh(sideWallGeometry, wallMaterial);
-        leftWall.rotation.y = Math.PI / 2;
-        leftWall.position.set(-halfWidth + wallThickness / 2, wallHeight / 2, 0);
-        leftWall.castShadow = true;
-        leftWall.receiveShadow = true;
-        this.addToCurrentMap(leftWall);
-        this.registerCollider(leftWall, 0.4);
-
-        const rightWall = leftWall.clone();
-        rightWall.position.x = halfWidth - wallThickness / 2;
-        this.addToCurrentMap(rightWall);
-        this.registerCollider(rightWall, 0.4);
-
-        const segmentWidth = (roomWidth - doorOpening) / 2;
-        createWallSegment(segmentWidth, -doorOpening / 2 - segmentWidth / 2, -halfDepth + wallThickness / 2);
-        createWallSegment(segmentWidth, doorOpening / 2 + segmentWidth / 2, -halfDepth + wallThickness / 2);
-
-        const counter = new THREE.Mesh(
-            new THREE.BoxGeometry(roomWidth - 6, 4, 4.5),
-            new THREE.MeshStandardMaterial({ color: 0xffb3c8, roughness: 0.6 })
-        );
-        counter.position.set(0, 2, halfDepth - 6);
-        counter.castShadow = true;
-        counter.receiveShadow = true;
-        this.addToCurrentMap(counter);
-        this.registerCollider(counter, 0.3);
-
-        const createHealingPod = (xOffset) => {
-            const podGroup = new THREE.Group();
-
-            const base = new THREE.Mesh(
-                new THREE.CylinderGeometry(2.3, 2.6, 1.2, 24),
-                new THREE.MeshStandardMaterial({ color: 0xdfe6ff, roughness: 0.7 })
+        let modelHeight = 12; // Default height, will be updated from model
+        
+        // Load the 3D model for Pokemon Center interior
+        try {
+            const gltf = await this.loadGLTF('modelli_3D/buildings_and_interiors/poke_center_inside.glb');
+            const interior = gltf.scene;
+            
+            // Scale the model appropriately - use larger scale for interior
+            const scale = 15;
+            interior.scale.set(scale, scale, scale);
+            
+            // Position the model
+            interior.position.set(0, 0, 0);
+            interior.updateWorldMatrix(true, true);
+            
+            // Enable shadows for all meshes
+            interior.traverse((child) => {
+                if (child.isMesh) {
+                    child.castShadow = true;
+                    child.receiveShadow = true;
+                }
+            });
+            
+            this.addToCurrentMap(interior);
+            
+            // Calculate bounds from the model
+            const boundingBox = new THREE.Box3().setFromObject(interior);
+            const halfWidth = (boundingBox.max.x - boundingBox.min.x) / 2;
+            const halfDepth = (boundingBox.max.z - boundingBox.min.z) / 2;
+            modelHeight = boundingBox.max.y - boundingBox.min.y;
+            
+            this.mapBounds = {
+                minX: boundingBox.min.x + 1.5,
+                maxX: boundingBox.max.x - 1.5,
+                minZ: boundingBox.min.z + 1.5,
+                maxZ: boundingBox.max.z - 1.5
+            };
+            
+            console.log(`✓ Interno Poké Center caricato (bounds: ${halfWidth.toFixed(1)} x ${halfDepth.toFixed(1)}, height: ${modelHeight.toFixed(1)})`);
+        } catch (error) {
+            console.error('Errore caricamento interno Poké Center:', error);
+            // Fallback to a simple floor if model fails to load
+            const floor = new THREE.Mesh(
+                new THREE.PlaneGeometry(42, 54),
+                new THREE.MeshStandardMaterial({ color: 0xfdf6f6, roughness: 0.82, metalness: 0.08 })
             );
-            base.position.y = 0.6;
-            base.castShadow = true;
-            base.receiveShadow = true;
-            podGroup.add(base);
+            floor.rotation.x = -Math.PI / 2;
+            floor.receiveShadow = true;
+            this.addToCurrentMap(floor);
+            
+            this.mapBounds = {
+                minX: -20,
+                maxX: 20,
+                minZ: -25,
+                maxZ: 25
+            };
+        }
 
-            const glass = new THREE.Mesh(
-                new THREE.CylinderGeometry(1.7, 1.7, 5.5, 20, 1, true),
-                new THREE.MeshStandardMaterial({ color: 0x9ad7ff, transparent: true, opacity: 0.45, roughness: 0 })
-            );
-            glass.position.y = 3.4;
-            podGroup.add(glass);
-
-            const cap = new THREE.Mesh(
-                new THREE.CylinderGeometry(2.2, 2.3, 1, 24),
-                new THREE.MeshStandardMaterial({ color: 0xff8aa6, roughness: 0.5 })
-            );
-            cap.position.y = 6.4;
-            cap.castShadow = true;
-            cap.receiveShadow = true;
-            podGroup.add(cap);
-
-            podGroup.position.set(xOffset, 0, halfDepth - 12);
-            this.addToCurrentMap(podGroup);
-            this.registerCollider(podGroup, 0.3);
-        };
-
-        createHealingPod(-8);
-        createHealingPod(0);
-        createHealingPod(8);
-
-        const benchMaterial = new THREE.MeshStandardMaterial({ color: 0xcfcfcf, roughness: 0.6 });
-        const createBench = (x, z) => {
-            const bench = new THREE.Mesh(new THREE.BoxGeometry(8, 1.2, 2.4), benchMaterial);
-            bench.position.set(x, 0.6, z);
-            bench.castShadow = true;
-            bench.receiveShadow = true;
-            this.addToCurrentMap(bench);
-            this.registerCollider(bench, 0.2);
-        };
-
-        createBench(-11, 6);
-        createBench(11, 6);
-
+        // Add interior lighting - position based on model height
         const receptionLight = new THREE.PointLight(0xfff2f2, 0.65, 70);
-        receptionLight.position.set(0, wallHeight - 1.5, 4);
+        receptionLight.position.set(0, modelHeight * 0.85, 4);
         receptionLight.castShadow = true;
         this.addToCurrentMap(receptionLight);
 
@@ -564,10 +504,12 @@ export class RPGGame {
         const targetSpawn = options.returnSpawn || this.currentReturnContext?.spawn || this.getDefaultSpawn(targetMap);
         const interiorSpawn = options.spawn || this.getDefaultSpawn('pokecenter');
 
+        // Create exit door trigger at the front of the room - position based on model height
+        const doorHeight = Math.min(6, modelHeight * 0.5);
         this.createDoorTrigger({
-            position: new THREE.Vector3(0, 3, -halfDepth + 0.6),
+            position: new THREE.Vector3(0, doorHeight / 2, this.mapBounds.minZ + 0.6),
             width: 5.5,
-            height: 6,
+            height: doorHeight,
             depth: 1.6,
             targetMap,
             spawn: targetSpawn,
@@ -795,7 +737,7 @@ export class RPGGame {
         // Add nature elements across the expanded map
         const scatterXRange = [this.mapBounds.minX + 10, this.mapBounds.maxX - 10];
         const scatterZRange = [this.mapBounds.minZ + 10, this.mapBounds.maxZ - 10];
-        this.createTrees({ count: 70, xRange: scatterXRange, zRange: scatterZRange, clearRadius: 20 });
+        await this.createTrees({ count: 70, xRange: scatterXRange, zRange: scatterZRange, clearRadius: 20 });
         this.createRocks({ count: 45, xRange: scatterXRange, zRange: scatterZRange });
         this.createBushes({ count: 60, xRange: scatterXRange, zRange: scatterZRange });
 
@@ -1066,7 +1008,7 @@ export class RPGGame {
         console.log(`✓ NPC ${npcId} creato`);
     }
 
-    createTrees(config = {}) {
+    async createTrees(config = {}) {
         let options = {};
         if (typeof config === 'boolean') {
             options = config
@@ -1084,6 +1026,15 @@ export class RPGGame {
             xRange = null,
             zRange = null
         } = options;
+
+        // Load the pine tree model once
+        let treeModel = null;
+        try {
+            const gltf = await this.loadGLTF('modelli_3D/environment/stylized_pine_tree_tree.glb');
+            treeModel = gltf.scene;
+        } catch (error) {
+            console.warn('Could not load pine tree model, using procedural trees:', error);
+        }
 
         for (let i = 0; i < count; i++) {
             let x;
@@ -1107,65 +1058,87 @@ export class RPGGame {
                     continue;
                 }
             }
-            const treeGroup = new THREE.Group();
 
-            // Trunk - more realistic proportions
-            const trunkGeometry = new THREE.CylinderGeometry(0.8, 1, 6, 12);
-            const trunkMaterial = new THREE.MeshStandardMaterial({ 
-                color: 0x4a3520,
-                roughness: 0.95
-            });
-            const trunk = new THREE.Mesh(trunkGeometry, trunkMaterial);
-            trunk.position.y = 3;
-            trunk.castShadow = true;
-            trunk.receiveShadow = true;
-            treeGroup.add(trunk);
+            let tree;
+            if (treeModel) {
+                // Clone the loaded pine tree model
+                tree = treeModel.clone();
+                
+                // Enable shadows for all meshes
+                tree.traverse((child) => {
+                    if (child.isMesh) {
+                        child.castShadow = true;
+                        child.receiveShadow = true;
+                    }
+                });
+                
+                // Scale the model appropriately (adjust based on actual model size)
+                const baseScale = 3;
+                const randomScale = THREE.MathUtils.randFloat(0.85, 1.35);
+                tree.scale.set(baseScale * randomScale, baseScale * randomScale, baseScale * randomScale);
+            } else {
+                // Fallback to procedural trees if model fails to load
+                tree = new THREE.Group();
 
-            // Multi-layer foliage for more realistic tree
-            const foliageColor = maxRadius > 100 ? 0x3b6b2a : 0x3a7f2d;
-            
-            // Bottom layer
-            const foliage1 = new THREE.Mesh(
-                new THREE.ConeGeometry(4, 5, 12),
-                new THREE.MeshStandardMaterial({ 
-                    color: foliageColor,
-                    roughness: 0.9
-                })
-            );
-            foliage1.position.y = 7;
-            foliage1.castShadow = true;
-            treeGroup.add(foliage1);
-            
-            // Middle layer
-            const foliage2 = new THREE.Mesh(
-                new THREE.ConeGeometry(3.5, 4, 12),
-                new THREE.MeshStandardMaterial({ 
-                    color: foliageColor,
-                    roughness: 0.9
-                })
-            );
-            foliage2.position.y = 10;
-            foliage2.castShadow = true;
-            treeGroup.add(foliage2);
-            
-            // Top layer
-            const foliage3 = new THREE.Mesh(
-                new THREE.ConeGeometry(2.5, 3, 12),
-                new THREE.MeshStandardMaterial({ 
-                    color: foliageColor,
-                    roughness: 0.9
-                })
-            );
-            foliage3.position.y = 12.5;
-            foliage3.castShadow = true;
-            treeGroup.add(foliage3);
+                // Trunk - more realistic proportions
+                const trunkGeometry = new THREE.CylinderGeometry(0.8, 1, 6, 12);
+                const trunkMaterial = new THREE.MeshStandardMaterial({ 
+                    color: 0x4a3520,
+                    roughness: 0.95
+                });
+                const trunk = new THREE.Mesh(trunkGeometry, trunkMaterial);
+                trunk.position.y = 3;
+                trunk.castShadow = true;
+                trunk.receiveShadow = true;
+                tree.add(trunk);
+
+                // Multi-layer foliage for more realistic tree
+                const foliageColor = maxRadius > 100 ? 0x3b6b2a : 0x3a7f2d;
+                
+                // Bottom layer
+                const foliage1 = new THREE.Mesh(
+                    new THREE.ConeGeometry(4, 5, 12),
+                    new THREE.MeshStandardMaterial({ 
+                        color: foliageColor,
+                        roughness: 0.9
+                    })
+                );
+                foliage1.position.y = 7;
+                foliage1.castShadow = true;
+                tree.add(foliage1);
+                
+                // Middle layer
+                const foliage2 = new THREE.Mesh(
+                    new THREE.ConeGeometry(3.5, 4, 12),
+                    new THREE.MeshStandardMaterial({ 
+                        color: foliageColor,
+                        roughness: 0.9
+                    })
+                );
+                foliage2.position.y = 10;
+                foliage2.castShadow = true;
+                tree.add(foliage2);
+                
+                // Top layer
+                const foliage3 = new THREE.Mesh(
+                    new THREE.ConeGeometry(2.5, 3, 12),
+                    new THREE.MeshStandardMaterial({ 
+                        color: foliageColor,
+                        roughness: 0.9
+                    })
+                );
+                foliage3.position.y = 12.5;
+                foliage3.castShadow = true;
+                tree.add(foliage3);
+                
+                const randomScale = THREE.MathUtils.randFloat(0.85, 1.35);
+                tree.scale.set(randomScale, randomScale, randomScale);
+            }
             
             const groundHeight = this.getGroundHeight ? this.getGroundHeight(x, z) : 0;
-            const randomScale = THREE.MathUtils.randFloat(0.85, 1.35);
-            treeGroup.scale.set(randomScale, randomScale, randomScale);
-            treeGroup.rotation.y = Math.random() * Math.PI * 2;
-            treeGroup.position.set(x, groundHeight + 0.1, z);
-            this.addToCurrentMap(treeGroup);
+            tree.rotation.y = Math.random() * Math.PI * 2;
+            tree.position.set(x, groundHeight + 0.1, z);
+            this.addToCurrentMap(tree);
         }
     }
 
