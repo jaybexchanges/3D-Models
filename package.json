@@ -1,28 +1,45 @@
 {
-  "name": "3d-monsters-game",
+  "name": "3d-models",
   "version": "1.0.0",
-  "description": "Mappa di gioco 3D con mostriciattoli animati",
-  "main": "game.js",
+  "description": "Swissmon - A Pokémon-like 3D RPG game built with Three.js. Catch monsters, battle trainers, and explore!",
   "type": "module",
   "scripts": {
     "start": "python3 -m http.server 8000",
     "dev": "python3 -m http.server 8000",
+    "serve": "npx http-server -p 8000 -c-1",
     "test": "node test-moves-system.js && node test-capture-system.js && node test-geometry-system.js",
-    "screenshots": "node capture-screenshots.js"
+    "test:moves": "node test-moves-system.js",
+    "test:capture": "node test-capture-system.js",
+    "test:geometry": "node test-geometry-system.js",
+    "screenshots": "node capture-screenshots.js",
+    "lint": "echo 'No linter configured'",
+    "build": "echo 'No build step required - vanilla JS'"
   },
   "keywords": [
     "3D",
     "game",
     "three.js",
     "monsters",
-    "animation"
+    "rpg",
+    "pokemon-like",
+    "webgl",
+    "turn-based",
+    "browser-game"
   ],
   "author": "",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jaybexchanges/3D-Models"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "dependencies": {
     "three": "^0.169.0"
   },
   "devDependencies": {
+    "http-server": "^14.1.1",
     "puppeteer-core": "^23.0.0",
     "typescript": "^5.9.3"
   }

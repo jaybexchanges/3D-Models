@@ -455,4 +455,33 @@ trainer4: {
 
 ---
 
+## 🤖 GitHub Spark Compatibility
+
+This repository is configured for use with **GitHub Spark**, the AI-powered app builder. 
+
+### Quick Start with Spark
+
+1. Open this repository with GitHub Spark
+2. Use natural language to describe changes you want to make
+3. Spark will understand the project structure and make intelligent modifications
+
+### Useful Prompts for Spark
+
+- "Add a new ice-type monster called Frostbite with stats similar to LavaFlare"
+- "Create a new healing move called 'Nature's Gift' for grass types"
+- "Add a new NPC trainer in the wild area"
+- "Improve the battle UI with better animations"
+- "Add a new item to the shop"
+
+### Documentation for Spark
+
+- **[SPARK.md](SPARK.md)** - Detailed project requirements for AI assistance
+- **[CONTRIBUTING.md](CONTRIBUTING.md)** - Contribution guidelines
+
+### Development Environment
+
+The repository includes a `.devcontainer` configuration for VS Code and GitHub Codespaces, ensuring a consistent development environment.
+
+---
+
 Buona avventura nel mondo dei mostriciattoli! 🎉👾
