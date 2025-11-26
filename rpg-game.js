@@ -401,11 +401,23 @@ export class RPGGame {
             const scaledBottomY = modelBottomY * villageScale;
             villageModel.position.set(0, -scaledBottomY, 0);
             
-            // Enable shadows for all meshes
+            // Enable shadows for all meshes and register colliders for building meshes
             villageModel.traverse((child) => {
                 if (child.isMesh) {
                     child.castShadow = true;
                     child.receiveShadow = true;
+                    
+                    // Register colliders for larger objects (buildings/structures)
+                    child.updateWorldMatrix(true, true);
+                    const childBox = new THREE.Box3().setFromObject(child);
+                    const size = new THREE.Vector3();
+                    childBox.getSize(size);
+                    
+                    // Register as collider if it's a substantial structure
+                    // (larger than 2 units in width or depth and taller than 1 unit)
+                    if ((size.x > 2 || size.z > 2) && size.y > 1) {
+                        this.registerCollider(child, 0.5);
+                    }
                 }
             });
             
@@ -415,7 +427,80 @@ export class RPGGame {
             console.error('Failed to load villaggio_iniziale model:', error.message || error);
         }
 
+        // Add Prof. Sgarbi Laboratory at a distance from the village
+        await this.loadProfSgarbiLab();
+
         console.log('✓ Villaggio creato');
+    }
+
+    async loadProfSgarbiLab() {
+        try {
+            console.log('Loading Prof. Sgarbi laboratory...');
+            const gltf = await this.loadGLTF('modelli_3D/buildings_and_interiors/prof_sgarbi_lab.glb');
+            const labModel = gltf.scene;
+            
+            // Calculate bounding box for proper scaling
+            labModel.updateMatrixWorld(true);
+            const boundingBox = new THREE.Box3().setFromObject(labModel);
+            const modelHeight = boundingBox.max.y - boundingBox.min.y;
+            const modelBottomY = boundingBox.min.y;
+            
+            // Scale the lab so the door is player-sized (similar to village scaling)
+            const playerHeight = 3;
+            const targetDoorHeight = playerHeight * 1.2;
+            const estimatedDoorRatio = 0.15;
+            const targetTotalHeight = targetDoorHeight / estimatedDoorRatio;
+            const labScale = targetTotalHeight / modelHeight;
+            
+            labModel.scale.set(labScale, labScale, labScale);
+            
+            // Position the lab at a distance from the village center (e.g., x: 60, z: 40)
+            const labX = 60;
+            const labZ = 40;
+            const scaledBottomY = modelBottomY * labScale;
+            labModel.position.set(labX, -scaledBottomY, labZ);
+            
+            // Enable shadows and register colliders
+            labModel.traverse((child) => {
+                if (child.isMesh) {
+                    child.castShadow = true;
+                    child.receiveShadow = true;
+                    
+                    // Register colliders for building structures
+                    child.updateWorldMatrix(true, true);
+                    const childBox = new THREE.Box3().setFromObject(child);
+                    const size = new THREE.Vector3();
+                    childBox.getSize(size);
+                    
+                    if ((size.x > 2 || size.z > 2) && size.y > 1) {
+                        this.registerCollider(child, 0.5);
+                    }
+                }
+            });
+            
+            this.addToCurrentMap(labModel);
+            
+            // Calculate door position (front of the building)
+            const labBoundingBox = new THREE.Box3().setFromObject(labModel);
+            const doorHeight = playerHeight * 1.1;
+            
+            // Create door trigger to enter the lab
+            this.createDoorTrigger({
+                position: new THREE.Vector3(labX, doorHeight / 2, labBoundingBox.min.z + 1.5),
+                width: 3.5,
+                height: doorHeight,
+                depth: 2,
+                targetMap: 'sgarbi_lab',
+                spawn: { x: 0, z: 8 },
+                returnMap: 'village',
+                returnSpawn: { x: labX, z: labBoundingBox.min.z - 2 },
+                label: 'Entra nel Lab'
+            });
+            
+            console.log(`✓ Laboratorio Prof. Sgarbi caricato (scale: ${labScale.toFixed(3)})`);
+        } catch (error) {
+            console.error('Failed to load Prof. Sgarbi laboratory:', error.message || error);
+        }
     }
 
     async createPokeCenterInterior(options = {}) {
@@ -652,6 +737,135 @@ export class RPGGame {
         console.log('✓ Interno Market creato');
     }
 
+    async createSgarbiLabInterior(options = {}) {
+        this.clearCurrentMap();
+        this.setGroundHeightFunction(() => 0);
+
+        let modelHeight = 12; // Default height, will be updated from model
+        
+        // Load the 3D model for Prof. Sgarbi lab interior
+        try {
+            const gltf = await this.loadGLTF('modelli_3D/buildings_and_interiors/prof_sgarbi_lab_inside.glb');
+            const interior = gltf.scene;
+            
+            // Scale the model appropriately - use larger scale for interior
+            const scale = 15;
+            interior.scale.set(scale, scale, scale);
+            
+            // Position the model
+            interior.position.set(0, 0, 0);
+            interior.updateWorldMatrix(true, true);
+            
+            // Enable shadows for all meshes
+            interior.traverse((child) => {
+                if (child.isMesh) {
+                    child.castShadow = true;
+                    child.receiveShadow = true;
+                }
+            });
+            
+            this.addToCurrentMap(interior);
+            
+            // Calculate bounds from the model
+            const boundingBox = new THREE.Box3().setFromObject(interior);
+            const halfWidth = (boundingBox.max.x - boundingBox.min.x) / 2;
+            const halfDepth = (boundingBox.max.z - boundingBox.min.z) / 2;
+            modelHeight = boundingBox.max.y - boundingBox.min.y;
+            
+            this.mapBounds = {
+                minX: boundingBox.min.x + 1.5,
+                maxX: boundingBox.max.x - 1.5,
+                minZ: boundingBox.min.z + 1.5,
+                maxZ: boundingBox.max.z - 1.5
+            };
+            
+            console.log(`✓ Interno Lab Prof. Sgarbi caricato (bounds: ${halfWidth.toFixed(1)} x ${halfDepth.toFixed(1)}, height: ${modelHeight.toFixed(1)})`);
+        } catch (error) {
+            console.error('Errore caricamento interno Lab Prof. Sgarbi:', error);
+            // Fallback to a simple floor if model fails to load
+            const floor = new THREE.Mesh(
+                new THREE.PlaneGeometry(42, 54),
+                new THREE.MeshStandardMaterial({ color: 0xf0f0f0, roughness: 0.82, metalness: 0.08 })
+            );
+            floor.rotation.x = -Math.PI / 2;
+            floor.receiveShadow = true;
+            this.addToCurrentMap(floor);
+            
+            this.mapBounds = {
+                minX: -20,
+                maxX: 20,
+                minZ: -25,
+                maxZ: 25
+            };
+        }
+
+        // Add interior lighting
+        const mainLight = new THREE.PointLight(0xffffff, 0.65, 70);
+        mainLight.position.set(0, modelHeight * 0.85, 0);
+        mainLight.castShadow = true;
+        this.addToCurrentMap(mainLight);
+
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.78);
+        this.addToCurrentMap(ambientLight);
+
+        // Add Prof. Sgarbi NPC
+        await this.createProfSgarbiNPC();
+
+        const targetMap = options.returnMap || this.currentReturnContext?.map || 'village';
+        const targetSpawn = options.returnSpawn || this.currentReturnContext?.spawn || this.getDefaultSpawn(targetMap);
+        const interiorSpawn = options.spawn || this.getDefaultSpawn('sgarbi_lab');
+
+        // Create exit door trigger at the front of the room
+        const doorHeight = Math.min(6, modelHeight * 0.5);
+        this.createDoorTrigger({
+            position: new THREE.Vector3(0, doorHeight / 2, this.mapBounds.maxZ - 0.6),
+            width: 5.5,
+            height: doorHeight,
+            depth: 2,
+            targetMap,
+            spawn: targetSpawn,
+            returnMap: 'sgarbi_lab',
+            returnSpawn: interiorSpawn,
+            label: 'Esci all\'esterno'
+        });
+
+        console.log('✓ Interno Lab Prof. Sgarbi creato');
+    }
+
+    async createProfSgarbiNPC() {
+        try {
+            const gltf = await this.loadGLTF('modelli_3D/NPCs/prof_sgarbi.glb');
+            const npc = gltf.scene;
+            
+            // Scale NPC to be appropriate size relative to player (0.8-1.2 range)
+            // Player is scaled at 3, so NPC should be around 2.4-3.6
+            npc.scale.set(3, 3, 3);
+            
+            // Position NPC in the lab
+            npc.position.set(0, 0, -5);
+            
+            // Enable shadows
+            npc.traverse((child) => {
+                if (child.isMesh) {
+                    child.castShadow = true;
+                    child.receiveShadow = true;
+                }
+            });
+            
+            // Add NPC data
+            npc.userData.type = 'npc';
+            npc.userData.npcData = {
+                name: 'Prof. Sgarbi',
+                dialogue: 'Benvenuto nel mio laboratorio! Qui studio i misteriosi Swissmon di questa regione.'
+            };
+            
+            this.addToCurrentMap(npc);
+            console.log('✓ Prof. Sgarbi NPC caricato');
+        } catch (error) {
+            console.error('Errore caricamento Prof. Sgarbi NPC:', error);
+        }
+    }
+
     async createWildMap() {
         this.clearCurrentMap();
 
@@ -800,7 +1014,8 @@ export class RPGGame {
                 this.placeEntityOnGround(monster, spawnPoint.x, spawnPoint.z);
 
                 monster.userData.type = 'wild-monster';
-                monster.userData.name = config.file.replace('_3D.glb', '').replace('.glb', '');
+                // Remove path prefix and file extensions to get clean species name
+                monster.userData.name = config.file.replace('monsters/', '').replace('_3D.glb', '').replace('.glb', '');
                 monster.userData.idlePhase = Math.random() * Math.PI * 2;
                 monster.userData.wanderDirection = new THREE.Vector3(Math.random() - 0.5, 0, Math.random() - 0.5).normalize();
                 monster.userData.wanderSpeed = config.speed;
@@ -1038,9 +1253,10 @@ export class RPGGame {
             treeModel.userData.modelHeight = modelHeight;
             
             // Calculate appropriate base scale based on model size
-            // Target tree height should be around 12-15 units (similar to procedural trees)
-            const targetHeight = 12;
-            const autoScale = modelHeight > 0.1 ? targetHeight / modelHeight : 1;
+            // Target tree height should be 24-60 units (2-5x the original 12 units)
+            // We'll use a base target of 36 units (3x) with variation from 2x to 5x
+            const baseTargetHeight = 36;
+            const autoScale = modelHeight > 0.1 ? baseTargetHeight / modelHeight : 1;
             treeModel.userData.autoScale = autoScale;
             
             // Pre-calculate base ground offset (will be multiplied by final scale later)
@@ -1052,31 +1268,28 @@ export class RPGGame {
             treeModel = null;
         }
         
-        console.log(`Creating ${count} trees using ${treeModel ? '3D pine model' : 'procedural fallback'}`);
+        console.log(`Creating ${count} trees with clusters using ${treeModel ? '3D pine model' : 'procedural fallback'}`);
 
-        for (let i = 0; i < count; i++) {
-            let x;
-            let z;
+        // Create tree clusters (pinete) - groups of 3-7 trees near each other
+        const clusterCount = Math.floor(count / 5); // About 20% of trees will be cluster centers
+        const treesPerCluster = 4; // Trees per cluster (excluding center)
+        const clusterRadius = 15; // How spread out trees in a cluster are
+        const usedPositions = [];
+        const minDistanceBetweenClusters = 50; // Distance between cluster centers
+        const minDistanceInCluster = 8; // Minimum distance between trees in same cluster
 
-            if (Array.isArray(xRange) && Array.isArray(zRange)) {
-                x = THREE.MathUtils.randFloat(xRange[0], xRange[1]);
-                z = THREE.MathUtils.randFloat(zRange[0], zRange[1]);
-                if (Math.sqrt(x * x + z * z) < clearRadius) {
-                    i--;
-                    continue;
-                }
-            } else {
-                const angle = Math.random() * Math.PI * 2;
-                const radius = THREE.MathUtils.randFloat(minRadius, maxRadius);
-                x = Math.cos(angle) * radius;
-                z = Math.sin(angle) * radius;
-
-                if (Math.sqrt(x * x + z * z) < clearRadius) {
-                    i--;
-                    continue;
-                }
+        // Helper to check if position is too close to existing positions
+        const isTooClose = (x, z, minDist, positions) => {
+            for (const pos of positions) {
+                const dx = pos.x - x;
+                const dz = pos.z - z;
+                if (Math.sqrt(dx * dx + dz * dz) < minDist) return true;
             }
+            return false;
+        };
 
+        // Helper to create a single tree at position
+        const createTreeAt = (x, z) => {
             let tree;
             if (treeModel) {
                 // Clone the loaded pine tree model
@@ -1090,27 +1303,30 @@ export class RPGGame {
                     }
                 });
                 
-                // Use auto-calculated scale based on model size, with random variation
+                // Use auto-calculated scale based on model size, with random variation (2x to 5x original)
+                // autoScale already gives us 3x, so we vary from 0.67 (2x total) to 1.67 (5x total)
                 const autoScale = treeModel.userData.autoScale || 1;
-                const randomScale = THREE.MathUtils.randFloat(0.85, 1.35);
-                const finalScale = autoScale * randomScale;
+                const randomMultiplier = THREE.MathUtils.randFloat(0.67, 1.67);
+                const finalScale = autoScale * randomMultiplier;
                 tree.scale.set(finalScale, finalScale, finalScale);
                 
                 // Use pre-calculated base ground offset, scaled by finalScale
                 const baseGroundOffset = treeModel.userData.baseGroundOffset || 0;
                 tree.userData.groundOffset = baseGroundOffset * finalScale;
+                tree.userData.finalScale = finalScale;
             } else {
                 // Fallback to procedural trees if model fails to load
                 tree = new THREE.Group();
 
-                // Trunk - more realistic proportions
-                const trunkGeometry = new THREE.CylinderGeometry(0.8, 1, 6, 12);
+                // Trunk - more realistic proportions, 2-5x larger
+                const trunkScale = THREE.MathUtils.randFloat(2, 5);
+                const trunkGeometry = new THREE.CylinderGeometry(0.8 * trunkScale, 1 * trunkScale, 6 * trunkScale, 12);
                 const trunkMaterial = new THREE.MeshStandardMaterial({ 
                     color: 0x4a3520,
                     roughness: 0.95
                 });
                 const trunk = new THREE.Mesh(trunkGeometry, trunkMaterial);
-                trunk.position.y = 3;
+                trunk.position.y = 3 * trunkScale;
                 trunk.castShadow = true;
                 trunk.receiveShadow = true;
                 tree.add(trunk);
@@ -1120,42 +1336,41 @@ export class RPGGame {
                 
                 // Bottom layer
                 const foliage1 = new THREE.Mesh(
-                    new THREE.ConeGeometry(4, 5, 12),
+                    new THREE.ConeGeometry(4 * trunkScale, 5 * trunkScale, 12),
                     new THREE.MeshStandardMaterial({ 
                         color: foliageColor,
                         roughness: 0.9
                     })
                 );
-                foliage1.position.y = 7;
+                foliage1.position.y = 7 * trunkScale;
                 foliage1.castShadow = true;
                 tree.add(foliage1);
                 
                 // Middle layer
                 const foliage2 = new THREE.Mesh(
-                    new THREE.ConeGeometry(3.5, 4, 12),
+                    new THREE.ConeGeometry(3.5 * trunkScale, 4 * trunkScale, 12),
                     new THREE.MeshStandardMaterial({ 
                         color: foliageColor,
                         roughness: 0.9
                     })
                 );
-                foliage2.position.y = 10;
+                foliage2.position.y = 10 * trunkScale;
                 foliage2.castShadow = true;
                 tree.add(foliage2);
                 
                 // Top layer
                 const foliage3 = new THREE.Mesh(
-                    new THREE.ConeGeometry(2.5, 3, 12),
+                    new THREE.ConeGeometry(2.5 * trunkScale, 3 * trunkScale, 12),
                     new THREE.MeshStandardMaterial({ 
                         color: foliageColor,
                         roughness: 0.9
                     })
                 );
-                foliage3.position.y = 12.5;
+                foliage3.position.y = 12.5 * trunkScale;
                 foliage3.castShadow = true;
                 tree.add(foliage3);
                 
-                const randomScale = THREE.MathUtils.randFloat(0.85, 1.35);
-                tree.scale.set(randomScale, randomScale, randomScale);
+                tree.userData.finalScale = trunkScale;
             }
             
             const groundHeight = this.getGroundHeight ? this.getGroundHeight(x, z) : 0;
@@ -1165,7 +1380,96 @@ export class RPGGame {
             const groundOffset = tree.userData.groundOffset || 0;
             tree.position.set(x, groundHeight + groundOffset + 0.1, z);
             this.addToCurrentMap(tree);
+            
+            // Add collision detection for trees (they should not be traversable)
+            // Create a simple cylinder collider for the trunk
+            const trunkRadius = 1.5 * (tree.userData.finalScale || 1);
+            tree.updateWorldMatrix(true, true);
+            const treeBox = new THREE.Box3();
+            treeBox.min.set(x - trunkRadius, groundHeight, z - trunkRadius);
+            treeBox.max.set(x + trunkRadius, groundHeight + 50, z + trunkRadius);
+            this.colliders.push(treeBox);
+            
+            usedPositions.push({ x, z });
+            return tree;
+        };
+
+        let treesCreated = 0;
+
+        // First create tree clusters (pinete)
+        for (let c = 0; c < clusterCount && treesCreated < count; c++) {
+            let clusterX, clusterZ;
+            let attempts = 0;
+            
+            // Find a valid cluster center position
+            do {
+                if (Array.isArray(xRange) && Array.isArray(zRange)) {
+                    clusterX = THREE.MathUtils.randFloat(xRange[0] + clusterRadius, xRange[1] - clusterRadius);
+                    clusterZ = THREE.MathUtils.randFloat(zRange[0] + clusterRadius, zRange[1] - clusterRadius);
+                } else {
+                    const angle = Math.random() * Math.PI * 2;
+                    const radius = THREE.MathUtils.randFloat(minRadius + clusterRadius, maxRadius - clusterRadius);
+                    clusterX = Math.cos(angle) * radius;
+                    clusterZ = Math.sin(angle) * radius;
+                }
+                attempts++;
+            } while (
+                (Math.sqrt(clusterX * clusterX + clusterZ * clusterZ) < clearRadius + clusterRadius ||
+                 isTooClose(clusterX, clusterZ, minDistanceBetweenClusters, usedPositions)) &&
+                attempts < 30
+            );
+            
+            if (attempts >= 30) continue; // Skip this cluster if we can't find a good position
+            
+            // Create center tree
+            createTreeAt(clusterX, clusterZ);
+            treesCreated++;
+            
+            // Create surrounding trees in the cluster
+            for (let t = 0; t < treesPerCluster && treesCreated < count; t++) {
+                const angle = (t / treesPerCluster) * Math.PI * 2 + Math.random() * 0.5;
+                const dist = THREE.MathUtils.randFloat(minDistanceInCluster, clusterRadius);
+                const treeX = clusterX + Math.cos(angle) * dist;
+                const treeZ = clusterZ + Math.sin(angle) * dist;
+                
+                // Check bounds
+                if (Array.isArray(xRange) && (treeX < xRange[0] || treeX > xRange[1])) continue;
+                if (Array.isArray(zRange) && (treeZ < zRange[0] || treeZ > zRange[1])) continue;
+                if (!isTooClose(treeX, treeZ, minDistanceInCluster, usedPositions)) {
+                    createTreeAt(treeX, treeZ);
+                    treesCreated++;
+                }
+            }
         }
+
+        // Fill remaining count with scattered individual trees
+        for (let i = treesCreated; i < count; i++) {
+            let x, z;
+            let attempts = 0;
+
+            do {
+                if (Array.isArray(xRange) && Array.isArray(zRange)) {
+                    x = THREE.MathUtils.randFloat(xRange[0], xRange[1]);
+                    z = THREE.MathUtils.randFloat(zRange[0], zRange[1]);
+                } else {
+                    const angle = Math.random() * Math.PI * 2;
+                    const radius = THREE.MathUtils.randFloat(minRadius, maxRadius);
+                    x = Math.cos(angle) * radius;
+                    z = Math.sin(angle) * radius;
+                }
+                attempts++;
+            } while (
+                (Math.sqrt(x * x + z * z) < clearRadius ||
+                 isTooClose(x, z, minDistanceInCluster, usedPositions)) &&
+                attempts < 30
+            );
+
+            if (attempts < 30) {
+                createTreeAt(x, z);
+            }
+        }
+        
+        console.log(`✓ Created ${usedPositions.length} trees with ${clusterCount} clusters (pinete)`);
     }
 
     createFences() {
@@ -2008,6 +2312,8 @@ export class RPGGame {
             await this.createPokeCenterInterior(options);
         } else if (targetMap === 'market') {
             await this.createMarketInterior(options);
+        } else if (targetMap === 'sgarbi_lab') {
+            await this.createSgarbiLabInterior(options);
         } else {
             console.warn('Unknown map requested:', targetMap);
         }
@@ -2093,6 +2399,8 @@ export class RPGGame {
                 return { x: 0, z: -12 };
             case 'market':
                 return { x: 0, z: -12 };
+            case 'sgarbi_lab':
+                return { x: 0, z: 8 };
             case 'village':
             default:
                 return { x: 0, z: 0 };
@@ -2113,6 +2421,9 @@ export class RPGGame {
         } else if (mapName === 'market') {
             titleEl.textContent = '🛒 Nigrolino Market';
             textEl.textContent = 'Compra oggetti utili per la tua avventura!';
+        } else if (mapName === 'sgarbi_lab') {
+            titleEl.textContent = '🔬 Laboratorio Prof. Sgarbi';
+            textEl.textContent = 'Il laboratorio di ricerca sui Swissmon!';
         } else {
             titleEl.textContent = '🏘️ Villaggio Iniziale';
             textEl.textContent = 'Benvenuto nel mondo dei mostri!';
