@@ -351,10 +351,11 @@ export class RPGGame {
         // Flat plain - no height variation
         const villageHeightFn = () => 0;
         this.setGroundHeightFunction(villageHeightFn);
-        this.mapBounds = { minX: -48, maxX: 48, minZ: -48, maxZ: 48 };
+        // 4x larger map bounds (from -48,48 to -192,192)
+        this.mapBounds = { minX: -192, maxX: 192, minZ: -192, maxZ: 192 };
 
-        // Simple flat ground plane - just a plain (pianura)
-        const groundGeometry = new THREE.PlaneGeometry(100, 100, 1, 1);
+        // Simple flat ground plane - just a plain (pianura) - 4x larger (400x400)
+        const groundGeometry = new THREE.PlaneGeometry(400, 400, 1, 1);
         
         const groundMaterial = new THREE.MeshStandardMaterial({
             color: 0x4a8c4a,
@@ -369,7 +370,7 @@ export class RPGGame {
 
         // Village is now just a flat plain - no buildings, paths, houses, NPCs, trees, or fences
 
-        console.log('✓ Villaggio creato (pianura)');
+        console.log('✓ Villaggio creato (pianura 4x)');
     }
 
     async createPokeCenterInterior(options = {}) {
@@ -973,8 +974,13 @@ export class RPGGame {
         // Load the pine tree model once
         let treeModel = null;
         try {
+            console.log('Loading pine tree model from: modelli_3D/environment/stylized_pine_tree_tree.glb');
             const gltf = await this.loadGLTF('modelli_3D/environment/stylized_pine_tree_tree.glb');
             treeModel = gltf.scene;
+            
+            if (!treeModel) {
+                throw new Error('Model scene is null');
+            }
             
             // Calculate the bounding box to properly position the tree on the ground
             treeModel.updateMatrixWorld(true);
@@ -995,10 +1001,13 @@ export class RPGGame {
             // Pre-calculate base ground offset (will be multiplied by final scale later)
             treeModel.userData.baseGroundOffset = -modelBottomY;
             
-            console.log(`✓ Pine tree model loaded (original height: ${modelHeight.toFixed(2)}, autoScale: ${autoScale.toFixed(3)})`);
+            console.log(`✓ Pine tree 3D model loaded successfully (original height: ${modelHeight.toFixed(2)}, autoScale: ${autoScale.toFixed(3)})`);
         } catch (error) {
-            console.warn('Could not load pine tree model, using procedural trees:', error.message || error);
+            console.error('✗ Failed to load pine tree model, using procedural trees:', error.message || error);
+            treeModel = null;
         }
+        
+        console.log(`Creating ${count} trees using ${treeModel ? '3D pine model' : 'procedural fallback'}`);
 
         for (let i = 0; i < count; i++) {
             let x;
