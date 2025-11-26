@@ -989,12 +989,15 @@ export class RPGGame {
             // Calculate appropriate base scale based on model size
             // Target tree height should be around 12-15 units (similar to procedural trees)
             const targetHeight = 12;
-            const autoScale = modelHeight > 0 ? targetHeight / modelHeight : 1;
+            const autoScale = modelHeight > 0.1 ? targetHeight / modelHeight : 1;
             treeModel.userData.autoScale = autoScale;
+            
+            // Pre-calculate base ground offset (will be multiplied by final scale later)
+            treeModel.userData.baseGroundOffset = -modelBottomY;
             
             console.log(`✓ Pine tree model loaded (original height: ${modelHeight.toFixed(2)}, autoScale: ${autoScale.toFixed(3)})`);
         } catch (error) {
-            console.warn('Could not load pine tree model, using procedural trees:', error);
+            console.warn('Could not load pine tree model, using procedural trees:', error.message || error);
         }
 
         for (let i = 0; i < count; i++) {
@@ -1039,10 +1042,9 @@ export class RPGGame {
                 const finalScale = autoScale * randomScale;
                 tree.scale.set(finalScale, finalScale, finalScale);
                 
-                // Calculate ground placement offset based on model's bottom
-                // The modelBottomY might be negative if model origin is above base
-                const modelBottomY = (treeModel.userData.modelBottomY || 0) * finalScale;
-                tree.userData.groundOffset = -modelBottomY;
+                // Use pre-calculated base ground offset, scaled by finalScale
+                const baseGroundOffset = treeModel.userData.baseGroundOffset || 0;
+                tree.userData.groundOffset = baseGroundOffset * finalScale;
             } else {
                 // Fallback to procedural trees if model fails to load
                 tree = new THREE.Group();
