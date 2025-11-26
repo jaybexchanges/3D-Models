@@ -420,7 +420,6 @@ export class RPGGame {
             this.villageModel = villageModel;
             
             // Create a ground height function that uses raycasting on the village model
-            const originalHeightFn = this.getGroundHeight;
             this.setGroundHeightFunction((x, z) => {
                 // Cast a ray downward from high above to find the ground
                 raycaster.set(new THREE.Vector3(x, 50, z), downDirection);
