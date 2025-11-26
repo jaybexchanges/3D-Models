@@ -401,24 +401,38 @@ export class RPGGame {
             const scaledBottomY = modelBottomY * villageScale;
             villageModel.position.set(0, -scaledBottomY, 0);
             
-            // Enable shadows for all meshes and register colliders for building meshes
+            // Enable shadows for all meshes
+            // Note: We don't register the entire village model as a collider because it's one
+            // large mesh that would block all movement. Instead, we rely on the ground height
+            // system for collision detection with terrain.
             villageModel.traverse((child) => {
                 if (child.isMesh) {
                     child.castShadow = true;
                     child.receiveShadow = true;
-                    
-                    // Register colliders for larger objects (buildings/structures)
-                    child.updateWorldMatrix(true, true);
-                    const childBox = new THREE.Box3().setFromObject(child);
-                    const size = new THREE.Vector3();
-                    childBox.getSize(size);
-                    
-                    // Register as collider if it's a substantial structure
-                    // (larger than 2 units in width or depth and taller than 1 unit)
-                    if ((size.x > 2 || size.z > 2) && size.y > 1) {
-                        this.registerCollider(child, 0.5);
-                    }
                 }
+            });
+            
+            // Create a raycaster for ground height detection on the village model
+            const raycaster = new THREE.Raycaster();
+            const downDirection = new THREE.Vector3(0, -1, 0);
+            
+            // Store reference to village model for height checking
+            this.villageModel = villageModel;
+            
+            // Create a ground height function that uses raycasting on the village model
+            const originalHeightFn = this.getGroundHeight;
+            this.setGroundHeightFunction((x, z) => {
+                // Cast a ray downward from high above to find the ground
+                raycaster.set(new THREE.Vector3(x, 50, z), downDirection);
+                const intersects = raycaster.intersectObject(villageModel, true);
+                
+                if (intersects.length > 0) {
+                    // Return the Y position of the highest intersection point
+                    return intersects[0].point.y;
+                }
+                
+                // Default to 0 if no intersection
+                return 0;
             });
             
             this.addToCurrentMap(villageModel);
@@ -460,21 +474,11 @@ export class RPGGame {
             const scaledBottomY = modelBottomY * labScale;
             labModel.position.set(labX, -scaledBottomY, labZ);
             
-            // Enable shadows and register colliders
+            // Enable shadows
             labModel.traverse((child) => {
                 if (child.isMesh) {
                     child.castShadow = true;
                     child.receiveShadow = true;
-                    
-                    // Register colliders for building structures
-                    child.updateWorldMatrix(true, true);
-                    const childBox = new THREE.Box3().setFromObject(child);
-                    const size = new THREE.Vector3();
-                    childBox.getSize(size);
-                    
-                    if ((size.x > 2 || size.z > 2) && size.y > 1) {
-                        this.registerCollider(child, 0.5);
-                    }
                 }
             });
             
@@ -483,6 +487,14 @@ export class RPGGame {
             // Calculate door position (front of the building)
             const labBoundingBox = new THREE.Box3().setFromObject(labModel);
             const doorHeight = playerHeight * 1.1;
+            
+            // Register a simple box collider for the lab building (without blocking the door)
+            const labWidth = labBoundingBox.max.x - labBoundingBox.min.x;
+            const labDepth = labBoundingBox.max.z - labBoundingBox.min.z;
+            const labBox = new THREE.Box3();
+            labBox.min.set(labX - labWidth/2 * 0.8, 0, labZ - labDepth/2 * 0.6);
+            labBox.max.set(labX + labWidth/2 * 0.8, 30, labZ + labDepth/2 * 0.6);
+            this.colliders.push(labBox);
             
             // Create door trigger to enter the lab
             this.createDoorTrigger({
