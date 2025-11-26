@@ -970,9 +970,32 @@ export class RPGGame {
             zRange = null
         } = options;
 
-        // Use procedural trees for better compatibility and performance
-        // (3D pine tree model disabled to avoid potential rendering issues)
-        const treeModel = null;
+        // Load the pine tree model once
+        let treeModel = null;
+        try {
+            const gltf = await this.loadGLTF('modelli_3D/environment/stylized_pine_tree_tree.glb');
+            treeModel = gltf.scene;
+            
+            // Calculate the bounding box to properly position the tree on the ground
+            treeModel.updateMatrixWorld(true);
+            const boundingBox = new THREE.Box3().setFromObject(treeModel);
+            const modelHeight = boundingBox.max.y - boundingBox.min.y;
+            const modelBottomY = boundingBox.min.y;
+            
+            // Store metadata for proper ground placement
+            treeModel.userData.modelBottomY = modelBottomY;
+            treeModel.userData.modelHeight = modelHeight;
+            
+            // Calculate appropriate base scale based on model size
+            // Target tree height should be around 12-15 units (similar to procedural trees)
+            const targetHeight = 12;
+            const autoScale = modelHeight > 0 ? targetHeight / modelHeight : 1;
+            treeModel.userData.autoScale = autoScale;
+            
+            console.log(`✓ Pine tree model loaded (original height: ${modelHeight.toFixed(2)}, autoScale: ${autoScale.toFixed(3)})`);
+        } catch (error) {
+            console.warn('Could not load pine tree model, using procedural trees:', error);
+        }
 
         for (let i = 0; i < count; i++) {
             let x;
@@ -1010,10 +1033,16 @@ export class RPGGame {
                     }
                 });
                 
-                // Scale the model appropriately (adjust based on actual model size)
-                const baseScale = 3;
+                // Use auto-calculated scale based on model size, with random variation
+                const autoScale = treeModel.userData.autoScale || 1;
                 const randomScale = THREE.MathUtils.randFloat(0.85, 1.35);
-                tree.scale.set(baseScale * randomScale, baseScale * randomScale, baseScale * randomScale);
+                const finalScale = autoScale * randomScale;
+                tree.scale.set(finalScale, finalScale, finalScale);
+                
+                // Calculate ground placement offset based on model's bottom
+                // The modelBottomY might be negative if model origin is above base
+                const modelBottomY = (treeModel.userData.modelBottomY || 0) * finalScale;
+                tree.userData.groundOffset = -modelBottomY;
             } else {
                 // Fallback to procedural trees if model fails to load
                 tree = new THREE.Group();
@@ -1075,7 +1104,10 @@ export class RPGGame {
             
             const groundHeight = this.getGroundHeight ? this.getGroundHeight(x, z) : 0;
             tree.rotation.y = Math.random() * Math.PI * 2;
-            tree.position.set(x, groundHeight + 0.1, z);
+            
+            // Apply ground offset for 3D models (to place at correct height)
+            const groundOffset = tree.userData.groundOffset || 0;
+            tree.position.set(x, groundHeight + groundOffset + 0.1, z);
             this.addToCurrentMap(tree);
         }
     }
