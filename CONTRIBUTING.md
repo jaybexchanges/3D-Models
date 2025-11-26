@@ -23,10 +23,15 @@ Thank you for your interest in contributing to Swissmon! This guide will help yo
    ```
 
 3. **Start the development server**
+   
+   Using Python (recommended, requires Python 3.x):
    ```bash
    npm start
-   # or
-   python3 -m http.server 8000
+   ```
+   
+   Alternative using Node.js http-server (no Python required):
+   ```bash
+   npm run serve
    ```
 
 4. **Open the game**

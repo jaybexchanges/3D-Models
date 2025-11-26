@@ -1,8 +1,7 @@
 {
-  "name": "swissmon-3d-rpg",
+  "name": "3d-models",
   "version": "1.0.0",
-  "description": "A Pokémon-like 3D RPG game built with Three.js - Catch monsters, battle trainers, and explore!",
-  "main": "rpg-game.js",
+  "description": "Swissmon - A Pokémon-like 3D RPG game built with Three.js. Catch monsters, battle trainers, and explore!",
   "type": "module",
   "scripts": {
     "start": "python3 -m http.server 8000",
