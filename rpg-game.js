@@ -348,35 +348,13 @@ export class RPGGame {
     async createVillageMap() {
         this.clearCurrentMap();
 
-        const villageHeightFn = (x, z) => {
-            return Math.sin(x * 0.1) * 0.3 + Math.cos(z * 0.1) * 0.3;
-        };
+        // Flat plain - no height variation
+        const villageHeightFn = () => 0;
         this.setGroundHeightFunction(villageHeightFn);
         this.mapBounds = { minX: -48, maxX: 48, minZ: -48, maxZ: 48 };
 
-        // Ground with detailed grass texture
-        const groundGeometry = new THREE.PlaneGeometry(100, 100, 50, 50);
-        const vertices = groundGeometry.attributes.position.array;
-        
-        // Add subtle terrain variation
-        for (let i = 0; i < vertices.length; i += 3) {
-            const x = vertices[i];
-            const z = vertices[i + 1];
-            const original = villageHeightFn(x, z);
-            const distance = Math.hypot(x, z);
-            const innerRadius = 22;
-            const outerRadius = 45;
-            if (distance <= innerRadius) {
-                vertices[i + 2] = 0.05;
-            } else if (distance <= outerRadius) {
-                const t = (distance - innerRadius) / (outerRadius - innerRadius);
-                vertices[i + 2] = THREE.MathUtils.lerp(0.05, original, t);
-            } else {
-                vertices[i + 2] = original;
-            }
-        }
-        groundGeometry.attributes.position.needsUpdate = true;
-        groundGeometry.computeVertexNormals();
+        // Simple flat ground plane - just a plain (pianura)
+        const groundGeometry = new THREE.PlaneGeometry(100, 100, 1, 1);
         
         const groundMaterial = new THREE.MeshStandardMaterial({
             color: 0x4a8c4a,
@@ -389,44 +367,9 @@ export class RPGGame {
         ground.receiveShadow = true;
         this.addToCurrentMap(ground);
 
-        // Create paths with better appearance
-        this.createPath(0, 0, 6, 50, 0xa89968); // Main path vertical (wider)
-        this.createPath(0, 0, 50, 6, 0xa89968); // Main path horizontal (wider)
+        // Village is now just a flat plain - no buildings, paths, houses, NPCs, trees, or fences
 
-        // Load buildings with better scale
-        const pokeCenter = await this.loadBuilding('pokecenter', 'buildings_and_interiors/Pokémon_Center.glb', -15, 0, -15, 4.5);
-        const market = await this.loadBuilding('market', 'buildings_and_interiors/Nigrolino_market.glb', 15, 0, -15, 4);
-        this.createBuildingDoor(pokeCenter, {
-            targetMap: 'pokecenter',
-            spawn: { x: 0, z: -10 },
-            returnMap: 'village',
-            returnSpawn: { x: -15, z: -9 },
-            walkwayDepth: 6,
-            label: 'Entra nel Poké Center'
-        });
-        this.createBuildingDoor(market, {
-            targetMap: 'market',
-            spawn: { x: 0, z: -10 },
-            returnMap: 'village',
-            returnSpawn: { x: 15, z: -9 },
-            walkwayDepth: 6,
-            label: 'Entra nel Market'
-        });
-        
-        // Create houses
-        this.createHouse(-15, 0, 15, 0xff6b6b);
-        this.createHouse(15, 0, 15, 0x6bcfff);
-        this.createHouse(0, 0, -25, 0xffd700);
-
-        // Add NPC Trainers
-        this.createNPCTrainer('trainer1', -25, 0, 0, 0xff0000);
-        this.createNPCTrainer('trainer2', 25, 0, 5, 0x0000ff);
-
-        // Add decorations
-        await this.createTrees();
-        this.createFences();
-
-        console.log('✓ Villaggio creato');
+        console.log('✓ Villaggio creato (pianura)');
     }
 
     async createPokeCenterInterior(options = {}) {
@@ -1027,14 +970,9 @@ export class RPGGame {
             zRange = null
         } = options;
 
-        // Load the pine tree model once
-        let treeModel = null;
-        try {
-            const gltf = await this.loadGLTF('modelli_3D/environment/stylized_pine_tree_tree.glb');
-            treeModel = gltf.scene;
-        } catch (error) {
-            console.warn('Could not load pine tree model, using procedural trees:', error);
-        }
+        // Use procedural trees for better compatibility and performance
+        // (3D pine tree model disabled to avoid potential rendering issues)
+        const treeModel = null;
 
         for (let i = 0; i < count; i++) {
             let x;
