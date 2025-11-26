@@ -348,35 +348,14 @@ export class RPGGame {
     async createVillageMap() {
         this.clearCurrentMap();
 
-        const villageHeightFn = (x, z) => {
-            return Math.sin(x * 0.1) * 0.3 + Math.cos(z * 0.1) * 0.3;
-        };
+        // Flat plain - no height variation
+        const villageHeightFn = () => 0;
         this.setGroundHeightFunction(villageHeightFn);
-        this.mapBounds = { minX: -48, maxX: 48, minZ: -48, maxZ: 48 };
+        // 4x larger map bounds (from -48,48 to -192,192)
+        this.mapBounds = { minX: -192, maxX: 192, minZ: -192, maxZ: 192 };
 
-        // Ground with detailed grass texture
-        const groundGeometry = new THREE.PlaneGeometry(100, 100, 50, 50);
-        const vertices = groundGeometry.attributes.position.array;
-        
-        // Add subtle terrain variation
-        for (let i = 0; i < vertices.length; i += 3) {
-            const x = vertices[i];
-            const z = vertices[i + 1];
-            const original = villageHeightFn(x, z);
-            const distance = Math.hypot(x, z);
-            const innerRadius = 22;
-            const outerRadius = 45;
-            if (distance <= innerRadius) {
-                vertices[i + 2] = 0.05;
-            } else if (distance <= outerRadius) {
-                const t = (distance - innerRadius) / (outerRadius - innerRadius);
-                vertices[i + 2] = THREE.MathUtils.lerp(0.05, original, t);
-            } else {
-                vertices[i + 2] = original;
-            }
-        }
-        groundGeometry.attributes.position.needsUpdate = true;
-        groundGeometry.computeVertexNormals();
+        // Simple flat ground plane - just a plain (pianura) - 4x larger (400x400)
+        const groundGeometry = new THREE.PlaneGeometry(400, 400, 1, 1);
         
         const groundMaterial = new THREE.MeshStandardMaterial({
             color: 0x4a8c4a,
@@ -389,42 +368,52 @@ export class RPGGame {
         ground.receiveShadow = true;
         this.addToCurrentMap(ground);
 
-        // Create paths with better appearance
-        this.createPath(0, 0, 6, 50, 0xa89968); // Main path vertical (wider)
-        this.createPath(0, 0, 50, 6, 0xa89968); // Main path horizontal (wider)
-
-        // Load buildings with better scale
-        const pokeCenter = await this.loadBuilding('pokecenter', 'buildings_and_interiors/Pokémon_Center.glb', -15, 0, -15, 4.5);
-        const market = await this.loadBuilding('market', 'buildings_and_interiors/Nigrolino_market.glb', 15, 0, -15, 4);
-        this.createBuildingDoor(pokeCenter, {
-            targetMap: 'pokecenter',
-            spawn: { x: 0, z: -10 },
-            returnMap: 'village',
-            returnSpawn: { x: -15, z: -9 },
-            walkwayDepth: 6,
-            label: 'Entra nel Poké Center'
-        });
-        this.createBuildingDoor(market, {
-            targetMap: 'market',
-            spawn: { x: 0, z: -10 },
-            returnMap: 'village',
-            returnSpawn: { x: 15, z: -9 },
-            walkwayDepth: 6,
-            label: 'Entra nel Market'
-        });
-        
-        // Create houses
-        this.createHouse(-15, 0, 15, 0xff6b6b);
-        this.createHouse(15, 0, 15, 0x6bcfff);
-        this.createHouse(0, 0, -25, 0xffd700);
-
-        // Add NPC Trainers
-        this.createNPCTrainer('trainer1', -25, 0, 0, 0xff0000);
-        this.createNPCTrainer('trainer2', 25, 0, 5, 0x0000ff);
-
-        // Add decorations
-        await this.createTrees();
-        this.createFences();
+        // Load the villaggio_iniziale 3D model
+        try {
+            console.log('Loading villaggio_iniziale model...');
+            const gltf = await this.loadGLTF('modelli_3D/environment/villaggio_iniziale.glb');
+            const villageModel = gltf.scene;
+            
+            // Calculate bounding box to determine model dimensions
+            villageModel.updateMatrixWorld(true);
+            const boundingBox = new THREE.Box3().setFromObject(villageModel);
+            const modelHeight = boundingBox.max.y - boundingBox.min.y;
+            const modelWidth = boundingBox.max.x - boundingBox.min.x;
+            const modelDepth = boundingBox.max.z - boundingBox.min.z;
+            const modelBottomY = boundingBox.min.y;
+            
+            console.log(`Village model dimensions: height=${modelHeight.toFixed(2)}, width=${modelWidth.toFixed(2)}, depth=${modelDepth.toFixed(2)}`);
+            
+            // Scale the village so the door height matches the player height
+            // Player is scaled at 3, with an approximate height of ~3 units (1 unit base * 3 scale)
+            // A typical door should be about 2-2.5 times player height
+            // We want the central building door to be roughly player-sized (~3 units)
+            // Assuming the door is approximately 1/10th of the total model height in the original model
+            const playerHeight = 3; // Player scale
+            const targetDoorHeight = playerHeight * 1.2; // Door slightly taller than player
+            const estimatedDoorRatio = 0.15; // Door is approximately 15% of total village height
+            const targetTotalHeight = targetDoorHeight / estimatedDoorRatio;
+            const villageScale = targetTotalHeight / modelHeight;
+            
+            villageModel.scale.set(villageScale, villageScale, villageScale);
+            
+            // Position the village model at ground level
+            const scaledBottomY = modelBottomY * villageScale;
+            villageModel.position.set(0, -scaledBottomY, 0);
+            
+            // Enable shadows for all meshes
+            villageModel.traverse((child) => {
+                if (child.isMesh) {
+                    child.castShadow = true;
+                    child.receiveShadow = true;
+                }
+            });
+            
+            this.addToCurrentMap(villageModel);
+            console.log(`✓ Villaggio iniziale caricato (scale: ${villageScale.toFixed(3)}, final height: ${(modelHeight * villageScale).toFixed(2)})`);
+        } catch (error) {
+            console.error('Failed to load villaggio_iniziale model:', error.message || error);
+        }
 
         console.log('✓ Villaggio creato');
     }
@@ -1030,11 +1019,40 @@ export class RPGGame {
         // Load the pine tree model once
         let treeModel = null;
         try {
+            console.log('Loading pine tree model from: modelli_3D/environment/stylized_pine_tree_tree.glb');
             const gltf = await this.loadGLTF('modelli_3D/environment/stylized_pine_tree_tree.glb');
             treeModel = gltf.scene;
+            
+            if (!treeModel) {
+                throw new Error('Model scene is null');
+            }
+            
+            // Calculate the bounding box to properly position the tree on the ground
+            treeModel.updateMatrixWorld(true);
+            const boundingBox = new THREE.Box3().setFromObject(treeModel);
+            const modelHeight = boundingBox.max.y - boundingBox.min.y;
+            const modelBottomY = boundingBox.min.y;
+            
+            // Store metadata for proper ground placement
+            treeModel.userData.modelBottomY = modelBottomY;
+            treeModel.userData.modelHeight = modelHeight;
+            
+            // Calculate appropriate base scale based on model size
+            // Target tree height should be around 12-15 units (similar to procedural trees)
+            const targetHeight = 12;
+            const autoScale = modelHeight > 0.1 ? targetHeight / modelHeight : 1;
+            treeModel.userData.autoScale = autoScale;
+            
+            // Pre-calculate base ground offset (will be multiplied by final scale later)
+            treeModel.userData.baseGroundOffset = -modelBottomY;
+            
+            console.log(`✓ Pine tree 3D model loaded successfully (original height: ${modelHeight.toFixed(2)}, autoScale: ${autoScale.toFixed(3)})`);
         } catch (error) {
-            console.warn('Could not load pine tree model, using procedural trees:', error);
+            console.error('✗ Failed to load pine tree model, using procedural trees:', error.message || error);
+            treeModel = null;
         }
+        
+        console.log(`Creating ${count} trees using ${treeModel ? '3D pine model' : 'procedural fallback'}`);
 
         for (let i = 0; i < count; i++) {
             let x;
@@ -1072,10 +1090,15 @@ export class RPGGame {
                     }
                 });
                 
-                // Scale the model appropriately (adjust based on actual model size)
-                const baseScale = 3;
+                // Use auto-calculated scale based on model size, with random variation
+                const autoScale = treeModel.userData.autoScale || 1;
                 const randomScale = THREE.MathUtils.randFloat(0.85, 1.35);
-                tree.scale.set(baseScale * randomScale, baseScale * randomScale, baseScale * randomScale);
+                const finalScale = autoScale * randomScale;
+                tree.scale.set(finalScale, finalScale, finalScale);
+                
+                // Use pre-calculated base ground offset, scaled by finalScale
+                const baseGroundOffset = treeModel.userData.baseGroundOffset || 0;
+                tree.userData.groundOffset = baseGroundOffset * finalScale;
             } else {
                 // Fallback to procedural trees if model fails to load
                 tree = new THREE.Group();
@@ -1137,7 +1160,10 @@ export class RPGGame {
             
             const groundHeight = this.getGroundHeight ? this.getGroundHeight(x, z) : 0;
             tree.rotation.y = Math.random() * Math.PI * 2;
-            tree.position.set(x, groundHeight + 0.1, z);
+            
+            // Apply ground offset for 3D models (to place at correct height)
+            const groundOffset = tree.userData.groundOffset || 0;
+            tree.position.set(x, groundHeight + groundOffset + 0.1, z);
             this.addToCurrentMap(tree);
         }
     }

@@ -1,6 +1,6 @@
 # Automated Screenshot Test Report
 
-Generated: 2025-11-25T15:00:34.925Z
+Generated: 2025-11-26T19:11:11.319Z
 
 ## Summary
 
@@ -16,18 +16,18 @@ Generated: 2025-11-25T15:00:34.925Z
 | 1 | 01_village_overview | (0.00, 25.00, 30.00) | Village center overview from above |
 | 2 | 02_pokecenter_view | (-15.00, 15.00, -5.00) | View of Poké Center from angle |
 | 3 | 03_market_view | (15.00, 15.00, -5.00) | View of Market from angle |
-| 4 | 11_ground_village_center | (0.00, 1.26, 5.00) | Ground-level: Village center looking toward Poké Center |
-| 5 | 12_ground_pokecenter_entrance | (-15.00, 0.36, -10.00) | Ground-level: Poké Center entrance close view |
-| 6 | 13_ground_market_entrance | (15.00, 0.96, -10.00) | Ground-level: Market entrance close view |
-| 7 | 14_ground_houses_west | (-10.00, 0.27, 15.00) | Ground-level: Western houses view |
-| 8 | 15_ground_houses_east | (10.00, 0.77, 15.00) | Ground-level: Eastern houses view |
-| 9 | 16_ground_npc_trainer | (-22.00, 0.54, 3.00) | Ground-level: NPC trainer area view |
-| 10 | 17_ground_village_south | (0.00, 0.72, 35.00) | Ground-level: Southern path toward wild zone |
-| 11 | 21_pokecenter_base_check | (-25.00, 0.14, -15.00) | Ground-level: Poké Center base verification (side angle) |
-| 12 | 22_market_base_check | (25.00, 0.50, -15.00) | Ground-level: Market base verification (side angle) |
-| 13 | 23_house_red_base | (-5.00, 0.03, 20.00) | Ground-level: Red house base verification |
-| 14 | 24_house_blue_base | (5.00, 0.32, 20.00) | Ground-level: Blue house base verification |
-| 15 | 25_player_perspective | (0.00, 2.79, 3.00) | Player perspective: Looking at village center |
+| 4 | 11_ground_village_center | (0.00, 1.00, 5.00) | Ground-level: Village center looking toward Poké Center |
+| 5 | 12_ground_pokecenter_entrance | (-15.00, 0.50, -10.00) | Ground-level: Poké Center entrance close view |
+| 6 | 13_ground_market_entrance | (15.00, 0.50, -10.00) | Ground-level: Market entrance close view |
+| 7 | 14_ground_houses_west | (-10.00, 0.50, 15.00) | Ground-level: Western houses view |
+| 8 | 15_ground_houses_east | (10.00, 0.50, 15.00) | Ground-level: Eastern houses view |
+| 9 | 16_ground_npc_trainer | (-22.00, 0.50, 3.00) | Ground-level: NPC trainer area view |
+| 10 | 17_ground_village_south | (0.00, 1.00, 35.00) | Ground-level: Southern path toward wild zone |
+| 11 | 21_pokecenter_base_check | (-25.00, 0.30, -15.00) | Ground-level: Poké Center base verification (side angle) |
+| 12 | 22_market_base_check | (25.00, 0.30, -15.00) | Ground-level: Market base verification (side angle) |
+| 13 | 23_house_red_base | (-5.00, 0.30, 20.00) | Ground-level: Red house base verification |
+| 14 | 24_house_blue_base | (5.00, 0.30, 20.00) | Ground-level: Blue house base verification |
+| 15 | 25_player_perspective | (0.00, 2.50, 3.00) | Player perspective: Looking at village center |
 
 ## Wild Zone (Zona Selvaggia) Screenshots
 
@@ -36,22 +36,22 @@ Generated: 2025-11-25T15:00:34.925Z
 | 1 | 31_wild_overview | (0.00, 40.00, 50.00) | Wild zone overview from above |
 | 2 | 32_wild_monsters_area | (30.00, 25.00, 30.00) | Wild zone monsters roaming area |
 | 3 | 33_wild_npc_trainer | (0.00, 20.00, -190.00) | Wild zone NPC trainer area (overhead) |
-| 4 | 41_ground_wild_center | (0.00, 5.55, 0.00) | Ground-level: Wild zone center view |
-| 5 | 42_ground_wild_monsters | (-20.00, 4.78, 20.00) | Ground-level: Looking at wild monsters area |
-| 6 | 43_ground_wild_trees | (50.00, 3.68, 50.00) | Ground-level: Trees and nature elements |
-| 7 | 44_ground_wild_rocks | (-40.00, 3.42, -40.00) | Ground-level: Rocks on terrain |
-| 8 | 45_ground_wild_npc | (10.00, 3.65, -200.00) | Ground-level: NPC trainer in wild zone |
-| 9 | 46_ground_wild_terrain | (0.00, 2.43, -100.00) | Ground-level: Terrain height variation check |
-| 10 | 47_wild_player_perspective | (0.00, 4.87, -30.00) | Player perspective: Looking across wild zone |
-| 11 | 51_walk_wild_north | (0.00, 4.86, -150.00) | Walking north in wild zone |
-| 12 | 52_walk_wild_east | (80.00, 2.81, 0.00) | Walking east in wild zone |
-| 13 | 53_walk_wild_west | (-80.00, 3.86, 0.00) | Walking west in wild zone |
-| 14 | 54_walk_wild_south | (0.00, 4.78, 150.00) | Walking south in wild zone |
-| 15 | 55_walk_wild_northeast | (60.00, 4.41, -60.00) | Walking northeast in wild zone |
-| 16 | 56_walk_wild_southwest | (-60.00, 5.66, 60.00) | Walking southwest in wild zone |
-| 17 | 57_walk_wild_closeup_tree | (30.00, 4.20, 30.00) | Close-up of tree placement on terrain |
-| 18 | 58_walk_wild_closeup_rock | (-30.00, 3.70, -30.00) | Close-up of rock placement on terrain |
-| 19 | 59_walk_wild_monster_encounter | (20.00, 5.88, 20.00) | Ground-level monster encounter view |
+| 4 | 41_ground_wild_center | (0.00, 4.52, 0.00) | Ground-level: Wild zone center view |
+| 5 | 42_ground_wild_monsters | (-20.00, 4.98, 20.00) | Ground-level: Looking at wild monsters area |
+| 6 | 43_ground_wild_trees | (50.00, 5.45, 50.00) | Ground-level: Trees and nature elements |
+| 7 | 44_ground_wild_rocks | (-40.00, 0.15, -40.00) | Ground-level: Rocks on terrain |
+| 8 | 45_ground_wild_npc | (10.00, 1.30, -200.00) | Ground-level: NPC trainer in wild zone |
+| 9 | 46_ground_wild_terrain | (0.00, 0.43, -100.00) | Ground-level: Terrain height variation check |
+| 10 | 47_wild_player_perspective | (0.00, 3.46, -30.00) | Player perspective: Looking across wild zone |
+| 11 | 51_walk_wild_north | (0.00, 0.49, -150.00) | Walking north in wild zone |
+| 12 | 52_walk_wild_east | (80.00, 6.84, 0.00) | Walking east in wild zone |
+| 13 | 53_walk_wild_west | (-80.00, 2.06, 0.00) | Walking west in wild zone |
+| 14 | 54_walk_wild_south | (0.00, 5.92, 150.00) | Walking south in wild zone |
+| 15 | 55_walk_wild_northeast | (60.00, 4.74, -60.00) | Walking northeast in wild zone |
+| 16 | 56_walk_wild_southwest | (-60.00, 3.74, 60.00) | Walking southwest in wild zone |
+| 17 | 57_walk_wild_closeup_tree | (30.00, 5.01, 30.00) | Close-up of tree placement on terrain |
+| 18 | 58_walk_wild_closeup_rock | (-30.00, 0.90, -30.00) | Close-up of rock placement on terrain |
+| 19 | 59_walk_wild_monster_encounter | (20.00, 6.11, 20.00) | Ground-level monster encounter view |
 | 20 | 60_walk_wild_panorama | (0.00, 60.00, 100.00) | Wide panorama view of wild zone |
 
 ## Ground-Level Views ("A Raso Terra")
