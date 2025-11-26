@@ -368,9 +368,54 @@ export class RPGGame {
         ground.receiveShadow = true;
         this.addToCurrentMap(ground);
 
-        // Village is now just a flat plain - no buildings, paths, houses, NPCs, trees, or fences
+        // Load the villaggio_iniziale 3D model
+        try {
+            console.log('Loading villaggio_iniziale model...');
+            const gltf = await this.loadGLTF('modelli_3D/environment/villaggio_iniziale.glb');
+            const villageModel = gltf.scene;
+            
+            // Calculate bounding box to determine model dimensions
+            villageModel.updateMatrixWorld(true);
+            const boundingBox = new THREE.Box3().setFromObject(villageModel);
+            const modelHeight = boundingBox.max.y - boundingBox.min.y;
+            const modelWidth = boundingBox.max.x - boundingBox.min.x;
+            const modelDepth = boundingBox.max.z - boundingBox.min.z;
+            const modelBottomY = boundingBox.min.y;
+            
+            console.log(`Village model dimensions: height=${modelHeight.toFixed(2)}, width=${modelWidth.toFixed(2)}, depth=${modelDepth.toFixed(2)}`);
+            
+            // Scale the village so the door height matches the player height
+            // Player is scaled at 3, with an approximate height of ~3 units (1 unit base * 3 scale)
+            // A typical door should be about 2-2.5 times player height
+            // We want the central building door to be roughly player-sized (~3 units)
+            // Assuming the door is approximately 1/10th of the total model height in the original model
+            const playerHeight = 3; // Player scale
+            const targetDoorHeight = playerHeight * 1.2; // Door slightly taller than player
+            const estimatedDoorRatio = 0.15; // Door is approximately 15% of total village height
+            const targetTotalHeight = targetDoorHeight / estimatedDoorRatio;
+            const villageScale = targetTotalHeight / modelHeight;
+            
+            villageModel.scale.set(villageScale, villageScale, villageScale);
+            
+            // Position the village model at ground level
+            const scaledBottomY = modelBottomY * villageScale;
+            villageModel.position.set(0, -scaledBottomY, 0);
+            
+            // Enable shadows for all meshes
+            villageModel.traverse((child) => {
+                if (child.isMesh) {
+                    child.castShadow = true;
+                    child.receiveShadow = true;
+                }
+            });
+            
+            this.addToCurrentMap(villageModel);
+            console.log(`✓ Villaggio iniziale caricato (scale: ${villageScale.toFixed(3)}, final height: ${(modelHeight * villageScale).toFixed(2)})`);
+        } catch (error) {
+            console.error('Failed to load villaggio_iniziale model:', error.message || error);
+        }
 
-        console.log('✓ Villaggio creato (pianura 4x)');
+        console.log('✓ Villaggio creato');
     }
 
     async createPokeCenterInterior(options = {}) {
