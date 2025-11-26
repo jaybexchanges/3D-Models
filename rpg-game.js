@@ -1393,8 +1393,19 @@ export class RPGGame {
             this.addToCurrentMap(tree);
             
             // Add collision detection for trees (they should not be traversable)
-            // Create a simple cylinder collider for the trunk
-            const trunkRadius = 1.5 * (tree.userData.finalScale || 1);
+            // Calculate trunk radius based on the visual tree height
+            // For 3D models: original height (463) * finalScale gives actual height
+            // Trunk radius should be proportional to tree height (roughly 1/15 of height)
+            let trunkRadius;
+            if (treeModel) {
+                // 3D model tree - calculate from actual final height
+                const actualHeight = (treeModel.userData.modelHeight || 463) * (tree.userData.finalScale || 0.078);
+                trunkRadius = Math.max(2, actualHeight / 15); // At least 2 units, proportional to height
+            } else {
+                // Procedural tree - use the trunkScale directly
+                trunkRadius = 1.5 * (tree.userData.finalScale || 1);
+            }
+            
             tree.updateWorldMatrix(true, true);
             const treeBox = new THREE.Box3();
             treeBox.min.set(x - trunkRadius, groundHeight, z - trunkRadius);
